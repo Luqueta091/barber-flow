@@ -1,0 +1,792 @@
+[
+  {
+    "id": "INF-001",
+    "title": "Provisionar infraestrutura básica (DB, Redis, Broker, Object Storage)",
+    "labels": [
+      "infra",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [],
+    "input_output": {
+      "input": "Cloud account + security policy",
+      "output": "Connection strings, infra modules"
+    },
+    "acceptance_criteria": [
+      "Postgres com backup",
+      "Redis com auth",
+      "Broker configurado",
+      "Secrets em Secret Manager"
+    ],
+    "dependencies": [],
+    "artifacts": [
+      "terraform/",
+      "README_infra.md"
+    ]
+  },
+  {
+    "id": "INF-002",
+    "title": "Setup CI/CD pipeline (build, test, deploy)",
+    "labels": [
+      "infra",
+      "ci/cd",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "INF-001"
+    ],
+    "input_output": {
+      "input": "Repo + infra",
+      "output": "CI/CD pipeline definitions, images in registry"
+    },
+    "acceptance_criteria": [
+      "PR -> CI runs unit tests -> image pushed",
+      "merge->deploy staging"
+    ],
+    "dependencies": [
+      "INF-001"
+    ],
+    "artifacts": [
+      ".github/workflows/",
+      "deployment_scripts/"
+    ]
+  },
+  {
+    "id": "INF-003",
+    "title": "Secrets & Config management",
+    "labels": [
+      "infra",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "INF-001"
+    ],
+    "input_output": {
+      "input": "Secret manager",
+      "output": "Env schema validation + config loader"
+    },
+    "acceptance_criteria": [
+      "App reads configs from env/secret manager",
+      "Missing required env fails fast"
+    ],
+    "dependencies": [
+      "INF-001"
+    ],
+    "artifacts": [
+      "config/schema.yaml",
+      "README_config.md"
+    ]
+  },
+  {
+    "id": "SHARED-001",
+    "title": "Implement shared/common module (logging, errors, monitoring client)",
+    "labels": [
+      "shared",
+      "backend",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "INF-002"
+    ],
+    "input_output": {
+      "input": "language/runtime decision",
+      "output": "common package"
+    },
+    "acceptance_criteria": [
+      "Services import common.logging and emit structured logs",
+      "/metrics endpoint available"
+    ],
+    "dependencies": [
+      "INF-002"
+    ],
+    "artifacts": [
+      "modules/common/",
+      "README"
+    ]
+  },
+  {
+    "id": "DB-001",
+    "title": "Database schema inicial (migrations)",
+    "labels": [
+      "db",
+      "backend",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "INF-001"
+    ],
+    "input_output": {
+      "input": "Conceptual model",
+      "output": "migrations + ER diagram"
+    },
+    "acceptance_criteria": [
+      "Migrations apply successfully",
+      "ER diagram matches model",
+      "Integration tests use migrated DB"
+    ],
+    "dependencies": [
+      "INF-001",
+      "SHARED-001"
+    ],
+    "artifacts": [
+      "migrations/",
+      "er_diagram.md"
+    ]
+  },
+  {
+    "id": "DB-002",
+    "title": "Implement reservation table and row-lock procedure",
+    "labels": [
+      "db",
+      "backend",
+      "critical"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "DB-001"
+    ],
+    "input_output": {
+      "input": "migration applied",
+      "output": "reservation table + SQL examples"
+    },
+    "acceptance_criteria": [
+      "Concurrent inserts tests show 0 double-bookings"
+    ],
+    "dependencies": [
+      "DB-001"
+    ],
+    "artifacts": [
+      "sql/reservations.sql",
+      "tests/concurrency"
+    ]
+  },
+  {
+    "id": "AVA-001",
+    "title": "Implement Slot Generator domain module",
+    "labels": [
+      "availability",
+      "backend",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "SHARED-001",
+      "DB-001"
+    ],
+    "input_output": {
+      "input": "unitId, serviceId, date",
+      "output": "slots[]"
+    },
+    "acceptance_criteria": [
+      "Boundary times correct",
+      "Buffer & duration respected",
+      "Capacity respected",
+      "Unit tests cover edge cases"
+    ],
+    "dependencies": [
+      "DB-001",
+      "SHARED-001"
+    ],
+    "artifacts": [
+      "modules/availability/src/domain/slotGenerator",
+      "tests/unit"
+    ]
+  },
+  {
+    "id": "AVA-002",
+    "title": "Implement Reservations API (POST /slots/lock, POST /slots/release)",
+    "labels": [
+      "availability",
+      "backend",
+      "critical"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "DB-002",
+      "AVA-001"
+    ],
+    "input_output": {
+      "input": "slot selection",
+      "output": "reservationToken or 409"
+    },
+    "acceptance_criteria": [
+      "Lock returns token and persists reservation status=locked",
+      "Conflicting lock returns 409",
+      "Token stored in cache with TTL"
+    ],
+    "dependencies": [
+      "DB-002",
+      "AVA-001"
+    ],
+    "artifacts": [
+      "controllers/slots.js",
+      "integration_tests"
+    ]
+  },
+  {
+    "id": "AVA-003",
+    "title": "Cache layer and TTL strategy",
+    "labels": [
+      "availability",
+      "infra",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "INF-001"
+    ],
+    "input_output": {
+      "input": "availability keys schema",
+      "output": "redis client wrapper + invalidation hooks"
+    },
+    "acceptance_criteria": [
+      "Cache hit/miss metrics available",
+      "Reservation publish triggers cache invalidation"
+    ],
+    "dependencies": [
+      "INF-001"
+    ],
+    "artifacts": [
+      "modules/availability/src/cache",
+      "README_cache"
+    ]
+  },
+  {
+    "id": "AVA-004",
+    "title": "Counter implementation for capacity (DB-backed)",
+    "labels": [
+      "availability",
+      "backend",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "DB-002"
+    ],
+    "input_output": {
+      "input": "window identifier",
+      "output": "atomic counter updates"
+    },
+    "acceptance_criteria": [
+      "Concurrency tests show counter correctness under load"
+    ],
+    "dependencies": [
+      "DB-002"
+    ],
+    "artifacts": [
+      "sql/counters.sql",
+      "code/counter_service",
+      "tests"
+    ]
+  },
+  {
+    "id": "AVA-005",
+    "title": "API: GET /units/{id}/availability",
+    "labels": [
+      "availability",
+      "api",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "AVA-001",
+      "AVA-003"
+    ],
+    "input_output": {
+      "input": "unitId, date range, pagination",
+      "output": "availability DTO paginated"
+    },
+    "acceptance_criteria": [
+      "Endpoint responds within SLA for mock dataset",
+      "Sample response matches DTO"
+    ],
+    "dependencies": [
+      "AVA-001",
+      "AVA-003"
+    ],
+    "artifacts": [
+      "routes/availability.js",
+      "openapi.yaml"
+    ]
+  },
+  {
+    "id": "AVA-006",
+    "title": "Reservation expiration worker (cleanup)",
+    "labels": [
+      "availability",
+      "worker",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "AVA-002"
+    ],
+    "input_output": {
+      "input": "expired reservations",
+      "output": "released reservations + events published"
+    },
+    "acceptance_criteria": [
+      "Expired reservations cleaned within expected timeframe",
+      "Event published and cache invalidated"
+    ],
+    "dependencies": [
+      "AVA-002"
+    ],
+    "artifacts": [
+      "workers/expiration_worker.py",
+      "cron_config"
+    ]
+  },
+  {
+    "id": "SCHED-001",
+    "title": "Implement Appointment aggregate and use-cases",
+    "labels": [
+      "scheduling",
+      "backend",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "DB-001",
+      "SHARED-001"
+    ],
+    "input_output": {
+      "input": "Create/Cancel/NoShow commands",
+      "output": "Result pattern responses"
+    },
+    "acceptance_criteria": [
+      "Unit tests for business invariants",
+      "Domain returns Result patterns (no business exceptions)"
+    ],
+    "dependencies": [
+      "DB-001"
+    ],
+    "artifacts": [
+      "modules/scheduling/src/domain",
+      "tests"
+    ]
+  },
+  {
+    "id": "SCHED-002",
+    "title": "Integrate Scheduling with Availability lock",
+    "labels": [
+      "scheduling",
+      "backend",
+      "critical"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "AVA-002",
+      "SCHED-001"
+    ],
+    "input_output": {
+      "input": "create appointment request",
+      "output": "appointment persisted + published event"
+    },
+    "acceptance_criteria": [
+      "Happy path: lock->persist->publish",
+      "Failure path: lock conflict -> 409"
+    ],
+    "dependencies": [
+      "AVA-002",
+      "SCHED-001"
+    ],
+    "artifacts": [
+      "integration_tests",
+      "stubs"
+    ]
+  },
+  {
+    "id": "SCHED-003",
+    "title": "Publish domain events to EventBus",
+    "labels": [
+      "scheduling",
+      "eventing",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "INF-001",
+      "SCHED-001"
+    ],
+    "input_output": {
+      "input": "domain events",
+      "output": "messages on broker"
+    },
+    "acceptance_criteria": [
+      "Events published with v1 payload and consumed by notification worker in staging"
+    ],
+    "dependencies": [
+      "INF-001"
+    ],
+    "artifacts": [
+      "events/publisher",
+      "adr/events.md"
+    ]
+  },
+  {
+    "id": "SCHED-004",
+    "title": "Idempotency and concurrency protection on CreateAppointment",
+    "labels": [
+      "scheduling",
+      "backend",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "DB-001"
+    ],
+    "input_output": {
+      "input": "clientRequestId / reservationToken",
+      "output": "idempotent behavior"
+    },
+    "acceptance_criteria": [
+      "Replayed requests do not create duplicates"
+    ],
+    "dependencies": [
+      "DB-001"
+    ],
+    "artifacts": [
+      "tests/idempotency",
+      "db_constraints"
+    ]
+  },
+  {
+    "id": "AUTH-001",
+    "title": "Implement client login via phone OTP (stateless endpoint)",
+    "labels": [
+      "auth",
+      "backend",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "INF-001"
+    ],
+    "input_output": {
+      "input": "phone number",
+      "output": "OTP -> verify -> session token"
+    },
+    "acceptance_criteria": [
+      "OTP request->OTP verify->session token returned",
+      "Brute-force protections in place"
+    ],
+    "dependencies": [
+      "INF-001"
+    ],
+    "artifacts": [
+      "endpoints/auth",
+      "redis/otp_store",
+      "tests"
+    ]
+  },
+  {
+    "id": "USER-001",
+    "title": "User Profile CRUD and canonicalization",
+    "labels": [
+      "user-profile",
+      "backend",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "DB-001"
+    ],
+    "input_output": {
+      "input": "user data",
+      "output": "canonical user representation"
+    },
+    "acceptance_criteria": [
+      "CRUD endpoints implemented",
+      "Search by phone/email works"
+    ],
+    "dependencies": [
+      "DB-001"
+    ],
+    "artifacts": [
+      "modules/user",
+      "tests"
+    ]
+  },
+  {
+    "id": "ADMIN-001",
+    "title": "Implement Administration CRUD (Units, Services)",
+    "labels": [
+      "admin",
+      "backend",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "DB-001",
+      "AVA-005"
+    ],
+    "input_output": {
+      "input": "admin changes",
+      "output": "availability updated after invalidation"
+    },
+    "acceptance_criteria": [
+      "Admin create unit/service -> availability reflects change after cache invalidation"
+    ],
+    "dependencies": [
+      "DB-001",
+      "AVA-005"
+    ],
+    "artifacts": [
+      "endpoints/admin",
+      "README_admin"
+    ]
+  },
+  {
+    "id": "NOTIF-001",
+    "title": "Notifications worker skeleton and schedule",
+    "labels": [
+      "notifications",
+      "worker",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "SCHED-003",
+      "INF-001"
+    ],
+    "input_output": {
+      "input": "AppointmentCreated events",
+      "output": "reminder jobs enqueued"
+    },
+    "acceptance_criteria": [
+      "On AppointmentCreated in staging reminders jobs are enqueued"
+    ],
+    "dependencies": [
+      "SCHED-003"
+    ],
+    "artifacts": [
+      "workers/notifications",
+      "queue_config"
+    ]
+  },
+  {
+    "id": "NOTIF-002",
+    "title": "Implement push subscription API and storage",
+    "labels": [
+      "notifications",
+      "api",
+      "low"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "USER-001"
+    ],
+    "input_output": {
+      "input": "push subscription",
+      "output": "stored subscription"
+    },
+    "acceptance_criteria": [
+      "Subscriptions persist and used by worker"
+    ],
+    "dependencies": [
+      "USER-001"
+    ],
+    "artifacts": [
+      "endpoints/push",
+      "tests"
+    ]
+  },
+  {
+    "id": "BFF-001",
+    "title": "BFF endpoints for client flows (availability, booking)",
+    "labels": [
+      "frontend",
+      "bff",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "AVA-005",
+      "SCHED-002",
+      "AUTH-001"
+    ],
+    "input_output": {
+      "input": "client requests",
+      "output": "composed BFF responses"
+    },
+    "acceptance_criteria": [
+      "Client flow: view availability -> lock -> create appointment -> confirmation"
+    ],
+    "dependencies": [
+      "AVA-005",
+      "SCHED-002",
+      "AUTH-001"
+    ],
+    "artifacts": [
+      "bff/routes",
+      "integration_tests"
+    ]
+  },
+  {
+    "id": "UI-001",
+    "title": "Minimal client SPA for booking (core flows)",
+    "labels": [
+      "frontend",
+      "ui",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "BFF-001"
+    ],
+    "input_output": {
+      "input": "BFF endpoints",
+      "output": "React SPA build"
+    },
+    "acceptance_criteria": [
+      "Manual E2E: user books a slot end-to-end in staging"
+    ],
+    "dependencies": [
+      "BFF-001"
+    ],
+    "artifacts": [
+      "ui_repo",
+      "e2e_tests"
+    ]
+  },
+  {
+    "id": "QA-001",
+    "title": "Integration and E2E test suite",
+    "labels": [
+      "qa",
+      "testing",
+      "critical"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "core services implemented"
+    ],
+    "input_output": {
+      "input": "service endpoints",
+      "output": "integration and e2e suites"
+    },
+    "acceptance_criteria": [
+      "All integration tests pass in CI",
+      "E2E reproduces booking flow"
+    ],
+    "dependencies": [
+      "SCHED-002",
+      "AVA-002",
+      "BFF-001"
+    ],
+    "artifacts": [
+      "tests/integration",
+      "testdata"
+    ]
+  },
+  {
+    "id": "LOAD-001",
+    "title": "Load testing for hotspots (locks, availability)",
+    "labels": [
+      "qa",
+      "perf",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "QA-001"
+    ],
+    "input_output": {
+      "input": "load scripts",
+      "output": "reports"
+    },
+    "acceptance_criteria": [
+      "Defined SLA targets met or mitigations documented"
+    ],
+    "dependencies": [
+      "QA-001"
+    ],
+    "artifacts": [
+      "load/scenarios",
+      "report"
+    ]
+  },
+  {
+    "id": "OBS-001",
+    "title": "Instrument metrics, tracing and logs",
+    "labels": [
+      "observability",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "SHARED-001",
+      "INF-001"
+    ],
+    "input_output": {
+      "input": "critical paths",
+      "output": "dashboards + alerts"
+    },
+    "acceptance_criteria": [
+      "Dashboards show meaningful KPIs"
+    ],
+    "dependencies": [
+      "SHARED-001"
+    ],
+    "artifacts": [
+      "grafana/dashboards",
+      "prometheus/metrics"
+    ]
+  },
+  {
+    "id": "DEPLOY-001",
+    "title": "Canary deploy to production + smoke tests",
+    "labels": [
+      "deploy",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "INF-002"
+    ],
+    "input_output": {
+      "input": "canary config",
+      "output": "canary release promoted or rolled back"
+    },
+    "acceptance_criteria": [
+      "Canary passes smoke tests; rollback validated"
+    ],
+    "dependencies": [
+      "INF-002"
+    ],
+    "artifacts": [
+      "deployment/canary.yaml",
+      "runbook"
+    ]
+  },
+  {
+    "id": "REL-001",
+    "title": "Release checklist & documentation",
+    "labels": [
+      "release",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "All high priority tasks complete"
+    ],
+    "input_output": {
+      "input": "final artifacts",
+      "output": "RELEASE.md, ADRs, runbook"
+    },
+    "acceptance_criteria": [
+      "Release doc approved; on-call available"
+    ],
+    "dependencies": [],
+    "artifacts": [
+      "RELEASE.md",
+      "ADRs",
+      "runbook"
+    ]
+  }
+]
