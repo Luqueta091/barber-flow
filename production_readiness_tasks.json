@@ -1,0 +1,181 @@
+[
+  {
+    "id": "OPS-DR-001",
+    "title": "Restore test de backup (RTO/RPO)",
+    "labels": [
+      "operations",
+      "critical"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "DB-001",
+      "INF-001"
+    ],
+    "description": "Executar restore completo de backup em ambiente isolado (staging/isolado) com dataset representativo. Medir RTO/RPO e documentar passos, gaps e tempo total para restauração.",
+    "input_output": {
+      "input": "backup files, restore playbook",
+      "output": "restore report (RTO/RPO), restore scripts/notes"
+    },
+    "acceptance_criteria": [
+      "Restore completado com sucesso em ambiente isolado",
+      "RTO e RPO documentados e dentro de limites aceitos",
+      "Passos automatizáveis (scripts) entregues"
+    ],
+    "dependencies": [
+      "DB-001"
+    ],
+    "artifacts": [
+      "ops/restore_report.md",
+      "scripts/restore.sh"
+    ]
+  },
+  {
+    "id": "PIPE-CANARY-VERIF",
+    "title": "Verificação automatizada de canary (promove/rollback)",
+    "labels": [
+      "deploy",
+      "critical"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "DEPLOY-001",
+      "INF-002"
+    ],
+    "description": "Executar canary deploy controlado e validar que smoke tests e métricas disparam promoção ou rollback automático. Testar também rollback manual e validar runbook.",
+    "input_output": {
+      "input": "canary pipeline, smoke tests",
+      "output": "canary verification report, updated pipeline config"
+    },
+    "acceptance_criteria": [
+      "Canary completado e promovido automaticamente quando smoke passa",
+      "Rollback automático acionado em falha e validado",
+      "Logs e métricas do ciclo arquivados"
+    ],
+    "dependencies": [
+      "DEPLOY-001",
+      "INF-002"
+    ],
+    "artifacts": [
+      "pipeline/canary-run-report.md",
+      "pipeline/canary.yaml"
+    ]
+  },
+  {
+    "id": "ALERT-TUNE-001",
+    "title": "Ajuste e validação de alertas críticos",
+    "labels": [
+      "observability",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "OBS-ALERT-001"
+    ],
+    "description": "Ajustar thresholds de alertas (reservation latency, conflicts/sec, broker-lag). Validar via injetar falhas em staging para garantir alert -> on-call -> runbook workflow.",
+    "input_output": {
+      "input": "current alerts, staging environment",
+      "output": "tuned alert rules, trigger tests, alert runbook verificado"
+    },
+    "acceptance_criteria": [
+      "Alertas disparam em condições simuladas",
+      "On-call recebe alerta e executa runbook com sucesso",
+      "False positives reduzidos a níveis aceitáveis"
+    ],
+    "dependencies": [
+      "OBS-ALERT-001"
+    ],
+    "artifacts": [
+      "alerts/tuned_rules.yaml",
+      "ops/alert_drill_report.md"
+    ]
+  },
+  {
+    "id": "LOAD-FULL-001",
+    "title": "Teste de carga full-scale e análise",
+    "labels": [
+      "performance",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "LOAD-002",
+      "QA-001"
+    ],
+    "description": "Executar scripts de carga (k6) simulando picos e padrões reais. Medir latência, taxa de conflitos, consumo de recursos (DB, broker) e gerar plano de mitigação caso SLA falhe.",
+    "input_output": {
+      "input": "k6 scenarios, staging infra",
+      "output": "load report with bottlenecks and mitigation plan"
+    },
+    "acceptance_criteria": [
+      "Relatório completo gerado",
+      "SLA atendido ou mitigação documentada",
+      "Recomendações para autoscaling e tuning"
+    ],
+    "dependencies": [
+      "LOAD-002",
+      "QA-001"
+    ],
+    "artifacts": [
+      "load/reports/full_scale_report.md",
+      "load/scenarios/"
+    ]
+  },
+  {
+    "id": "PENTEST-SMALL",
+    "title": "Pentest focal e correção de vulnerabilidades críticas",
+    "labels": [
+      "security",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "SEC-001"
+    ],
+    "description": "Executar pentest focal nas áreas críticas (auth, broker auth, worker, APIs públicas). Priorizar correção de findings críticos e documentar evidências de remediação.",
+    "input_output": {
+      "input": "pentest engagement, app endpoints",
+      "output": "pentest report + remediation evidence"
+    },
+    "acceptance_criteria": [
+      "Findings críticos mitigados",
+      "Retest confirma correção",
+      "Remediation evidence documentada"
+    ],
+    "dependencies": [
+      "SEC-001"
+    ],
+    "artifacts": [
+      "security/pentest_report.md",
+      "security/remediation/"
+    ]
+  },
+  {
+    "id": "RUNBOOK-DRILL-001",
+    "title": "Drill de runbook (simulação de incident)",
+    "labels": [
+      "operations",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "RUNBOOK-001"
+    ],
+    "description": "Executar drill real: simular broker backlog ou worker crash, seguir runbook, medir MTTR e registrar gaps. Ajustar runbook conforme necessidade.",
+    "input_output": {
+      "input": "runbooks, staging environment",
+      "output": "drill report with MTTR and improvements"
+    },
+    "acceptance_criteria": [
+      "Drill executado e MTTR medido",
+      "Gaps documentados e runbook atualizado",
+      "Equipe capable de executar procedimentos"
+    ],
+    "dependencies": [
+      "RUNBOOK-001"
+    ],
+    "artifacts": [
+      "ops/drill_report.md",
+      "runbooks/updated/"
+    ]
+  }
+]
