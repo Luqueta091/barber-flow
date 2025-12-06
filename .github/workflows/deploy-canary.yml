@@ -50,17 +50,13 @@ jobs:
       - name: Install Railway CLI
         run: npm i -g @railway/cli
 
-      - name: Login Railway
-        env:
-          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
-        run: railway login --token "$RAILWAY_API_KEY"
-
       - name: Deploy canary (scale=1)
         env:
           IMAGE_NAME: ${{ needs.build-and-push.outputs.image || env.IMAGE_NAME }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
         run: |
-          railway up --service "$RAILWAY_SERVICE" --image "$IMAGE_NAME" --environment "$RAILWAY_CANARY_ENV" --detach \
-            || railway deploy --service "$RAILWAY_SERVICE" --image "$IMAGE_NAME" --environment "$RAILWAY_CANARY_ENV"
+          railway up --service "$RAILWAY_SERVICE" --image "$IMAGE_NAME" --environment "$RAILWAY_CANARY_ENV" --detach --token "$RAILWAY_TOKEN" \
+            || railway deploy --service "$RAILWAY_SERVICE" --image "$IMAGE_NAME" --environment "$RAILWAY_CANARY_ENV" --token "$RAILWAY_TOKEN"
 
       - name: Wait for canary to be healthy
         run: sleep 20
@@ -75,9 +71,9 @@ jobs:
       - name: Promote to production (scale up)
         if: success()
         run: |
-          railway services:scale "$RAILWAY_SERVICE" "$DESIRED_REPLICA_COUNT" --environment production || echo "Scale command failed - verify service/environment names"
+          railway services:scale "$RAILWAY_SERVICE" "$DESIRED_REPLICA_COUNT" --environment production --token "$RAILWAY_TOKEN" || echo "Scale command failed - verify service/environment names"
 
       - name: Rollback canary
         if: failure()
         run: |
-          railway down --service "$RAILWAY_SERVICE" --environment "$RAILWAY_CANARY_ENV" || echo "Rollback command failed"
+          railway down --service "$RAILWAY_SERVICE" --environment "$RAILWAY_CANARY_ENV" --token "$RAILWAY_TOKEN" || echo "Rollback command failed"
