@@ -64,6 +64,8 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
 
+> Nota: smoke tests de canary foram temporariamente desabilitados; o deploy agora depende da integração do Railway (pull-based) ou de deploy manual. Consulte `/mnt/data/arquitetura_macro_sistema_de_agendamento_v_1_ryuji_morimoto.md` para referência de arquitetura e fluxos de ambientes.
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
