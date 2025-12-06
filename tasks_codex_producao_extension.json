@@ -1,0 +1,210 @@
+[
+  {
+    "id": "NOTIF-INT-001",
+    "title": "Integrar worker com broker real (RabbitMQ/Kafka)",
+    "labels": [
+      "notifications",
+      "critical"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "NOTIF-001",
+      "INF-001",
+      "SCHED-003"
+    ],
+    "description": "Migrar publisher e consumer de in-memory para broker real com garantia at-least-once.",
+    "acceptance_criteria": [
+      "Mensagens persistidas no broker",
+      "Consumer idempotente",
+      "Reentrega garantida em caso de falha",
+      "DLQ configurada para mensagens que falharem repetidamente"
+    ],
+    "dependencies": [
+      "NOTIF-001",
+      "INF-001"
+    ],
+    "artifacts": [
+      "broker/config",
+      "worker/consumer",
+      "publisher"
+    ]
+  },
+  {
+    "id": "NOTIF-INT-002",
+    "title": "Integrar worker com provedores reais de notificação",
+    "labels": [
+      "notifications",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "NOTIF-INT-001"
+    ],
+    "description": "Adicionar entregas push/email/SMS com retries exponenciais e fallback.",
+    "acceptance_criteria": [
+      "Entrega push funciona com provider real",
+      "Retries com backoff implementados",
+      "Fallback para outro canal quando aplicável",
+      "DLQ recebe jobs que excederem retries"
+    ],
+    "dependencies": [
+      "NOTIF-INT-001"
+    ],
+    "artifacts": [
+      "notification/providers",
+      "provider-config"
+    ]
+  },
+  {
+    "id": "DEPLOY-PIPE-001",
+    "title": "Automatizar canary deploy + smoke tests + rollback",
+    "labels": [
+      "deploy",
+      "critical"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "INF-002"
+    ],
+    "description": "Pipeline executa canary, roda smoke tests automaticamente e promove ou faz rollback.",
+    "acceptance_criteria": [
+      "Smoke tests executados automaticamente no canary",
+      "Rollback automático em caso de falha",
+      "Logs e dashboards registram todo o ciclo"
+    ],
+    "dependencies": [
+      "INF-002"
+    ],
+    "artifacts": [
+      "pipeline/canary.yaml",
+      "smoke-tests/"
+    ]
+  },
+  {
+    "id": "OBS-ALERT-001",
+    "title": "Criar SLOs, dashboards e alertas operacionais",
+    "labels": [
+      "observability",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "OBS-001",
+      "INF-001"
+    ],
+    "description": "Definir KPIs, instrumentar dashboards e configurar alertas críticos.",
+    "acceptance_criteria": [
+      "SLOs definidos (latência de reserva, conflitos, throughput)",
+      "Dashboards prontos em Grafana",
+      "Alertas configurados com rotas de on-call",
+      "Tracing distribuído ativo (span IDs)"
+    ],
+    "dependencies": [
+      "OBS-001"
+    ],
+    "artifacts": [
+      "dashboards/grafana",
+      "alerts/rules.yaml"
+    ]
+  },
+  {
+    "id": "LOAD-002",
+    "title": "Executar testes de carga full-scale",
+    "labels": [
+      "performance",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "LOAD-001",
+      "QA-001"
+    ],
+    "description": "Testar lock, booking, availability e worker sob carga realista.",
+    "acceptance_criteria": [
+      "SLA atendido ou mitigação documentada",
+      "Relatório completo de latência, conflitos e consumo",
+      "Identificação de bottlenecks"
+    ],
+    "dependencies": [
+      "LOAD-001",
+      "QA-001"
+    ],
+    "artifacts": [
+      "load/k6-scenarios",
+      "load/reports"
+    ]
+  },
+  {
+    "id": "SEC-001",
+    "title": "Auditoria de segurança e IAM + rotação de secrets",
+    "labels": [
+      "security",
+      "high"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "INF-003"
+    ],
+    "description": "Revisar permissões, rotação de secrets, scans de vulnerabilidade, pentest básico.",
+    "acceptance_criteria": [
+      "IAM revisado (least privilege)",
+      "Secrets rotacionados",
+      "Dependency scan sem vulnerabilidades críticas",
+      "Pentest executado e mitigado"
+    ],
+    "dependencies": [
+      "INF-003"
+    ],
+    "artifacts": [
+      "security/audit-report",
+      "iam/policies"
+    ]
+  },
+  {
+    "id": "RUNBOOK-001",
+    "title": "Criar playbooks de incident response",
+    "labels": [
+      "operations",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [],
+    "description": "Criar guias para incidentes comuns: deadlock DB, backlog no broker, aumento de conflitos, worker parado.",
+    "acceptance_criteria": [
+      "Playbooks documentados",
+      "Testados com simulações",
+      "Checklist de resposta rápida criado"
+    ],
+    "dependencies": [],
+    "artifacts": [
+      "runbooks/",
+      "ops/checklists"
+    ]
+  },
+  {
+    "id": "E2E-EXT-001",
+    "title": "Expandir E2E com cenários de falha",
+    "labels": [
+      "testing",
+      "medium"
+    ],
+    "assignee": null,
+    "preconditions": [
+      "UI-001",
+      "BFF-001"
+    ],
+    "description": "Adicionar E2E para expirations, retries, token inválido, falha do worker.",
+    "acceptance_criteria": [
+      "Fluxos de erro cobertos",
+      "Tests automatizados no CI",
+      "Cobertura E2E > 80%"
+    ],
+    "dependencies": [
+      "UI-001",
+      "BFF-001"
+    ],
+    "artifacts": [
+      "tests/e2e/"
+    ]
+  }
+]
