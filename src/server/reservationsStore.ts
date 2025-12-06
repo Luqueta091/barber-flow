@@ -24,6 +24,10 @@ type LockInput = {
 export class ReservationsStore {
   private reservations = new Map<string, Reservation>();
 
+  reset() {
+    this.reservations.clear();
+  }
+
   lock(input: LockInput): Reservation {
     this.cleanupExpired();
     this.assertNoConflict(input);

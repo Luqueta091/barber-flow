@@ -82,8 +82,9 @@ export async function bffBookHandler(req: Request, res: Response) {
     await availabilityCache.invalidate({ unitId, serviceId, date: startAt.toISOString().slice(0, 10) });
 
     return res.status(201).json({ appointmentId: apptResult.value.id, reservationToken: reservation.token });
-  } catch (e: any) {
-    if (e?.message === "slot_conflict") return res.status(409).json({ error: "slot_conflict" });
+  } catch (e: unknown) {
+    const err = e as { message?: string } | undefined;
+    if (err?.message === "slot_conflict") return res.status(409).json({ error: "slot_conflict" });
     return res.status(500).json({ error: "internal_error" });
   }
 }

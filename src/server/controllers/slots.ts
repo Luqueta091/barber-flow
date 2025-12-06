@@ -28,8 +28,9 @@ export async function lockSlot(req: Request, res: Response) {
       status: reservation.status,
       expiresAt: reservation.expiresAt,
     });
-  } catch (err: any) {
-    if (err?.status === 409 || err?.message === "slot_conflict") {
+  } catch (err: unknown) {
+    const error = err as { status?: number; message?: string } | undefined;
+    if (error?.status === 409 || error?.message === "slot_conflict") {
       return res.status(409).json({ error: "slot_conflict" });
     }
     return res.status(500).json({ error: "internal_error" });

@@ -40,11 +40,9 @@ export function createExpirationWorker(deps: ExpirationWorkerDeps = {}) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const worker = createExpirationWorker();
   const intervalMs = Number(process.env.EXPIRATION_INTERVAL_MS ?? 60_000);
-  // eslint-disable-next-line no-console
   console.log(`Starting expiration worker every ${intervalMs} ms`);
   setInterval(() => {
     worker.runOnce().catch((err) => {
-      // eslint-disable-next-line no-console
       console.error("expiration_worker_error", err);
     });
   }, intervalMs);

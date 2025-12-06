@@ -7,8 +7,7 @@ const app = createApp();
 
 describe("POST /appointments", () => {
   beforeEach(() => {
-    // reset stores
-    (reservationsStore as any).reservations?.clear?.();
+    reservationsStore.reset();
     appointmentStore.clear();
   });
 

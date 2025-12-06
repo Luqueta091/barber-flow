@@ -13,10 +13,11 @@ export async function deliverWithRetry(
     try {
       await provider.send(job);
       return { ok: true };
-    } catch (e: any) {
+    } catch (e: unknown) {
       attempt += 1;
       if (attempt > maxRetries) {
-        return { ok: false, error: e?.message ?? "send_failed" };
+        const message = e instanceof Error ? e.message : "send_failed";
+        return { ok: false, error: message };
       }
       await new Promise((r) => setTimeout(r, backoffMs * attempt)); // simple backoff
     }

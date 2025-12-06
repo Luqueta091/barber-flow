@@ -8,7 +8,7 @@ describe("expiration worker", () => {
     vi.useFakeTimers();
     const store = new ReservationsStore();
     const cache = new InMemoryAvailabilityCache();
-    const published: any[] = [];
+    const published: { type: string }[] = [];
     const worker = createExpirationWorker({
       store,
       cache,

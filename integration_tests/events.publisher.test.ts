@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createApp } from "../src/server/app";
 import request from "supertest";
 import { eventPublisher } from "../src/server/store";
+import { InMemoryEventPublisher } from "../events/publisher";
 
 const app = createApp();
 
@@ -25,7 +26,8 @@ describe("Event publishing on appointment create", () => {
       reservationToken: token,
     });
 
-    const events = (eventPublisher as any).events ?? [];
+    expect(eventPublisher).toBeInstanceOf(InMemoryEventPublisher);
+    const events = (eventPublisher as InMemoryEventPublisher).events;
     expect(events.length).toBeGreaterThan(0);
     const evt = events[events.length - 1];
     expect(evt.type).toBe("AppointmentCreated");

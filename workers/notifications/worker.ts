@@ -16,7 +16,11 @@ export function enqueueNotification(job: NotificationJob) {
 
 export function processEvent(event: EventEnvelope) {
   if (event.type === "AppointmentCreated") {
-    const payload: any = event.payload;
+    const payload = event.payload as {
+      appointmentId: string;
+      userId: string;
+      startAt: string;
+    };
     enqueueNotification({
       type: "Reminder",
       appointmentId: payload.appointmentId,
@@ -39,6 +43,5 @@ export function queueLength() {
 
 // Example usage in a real worker process
 if (import.meta.url === `file://${process.argv[1]}`) {
-  // eslint-disable-next-line no-console
   console.log("Notification worker stub started. Connect to broker/queue here.");
 }

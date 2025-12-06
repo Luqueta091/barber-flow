@@ -10,7 +10,6 @@ export interface Provider {
 
 export class StubProvider implements Provider {
   async send(job: NotifyJob) {
-    // eslint-disable-next-line no-console
-    console.log("[stub-provider] sending", job.type, "to", job.target);
+    void job;
   }
 }

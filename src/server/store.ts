@@ -13,7 +13,6 @@ let publisherInstance: InMemoryEventPublisher | RabbitPublisher;
 if (brokerUrl) {
   const rabbit = new RabbitPublisher(brokerUrl, brokerExchange);
   rabbit.init().catch((err) => {
-    // eslint-disable-next-line no-console
     console.error("Rabbit init failed, falling back to in-memory", err);
   });
   publisherInstance = rabbit;
