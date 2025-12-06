@@ -6,9 +6,15 @@ const envSchema = z.object({
   VITE_SENTRY_DSN: z.string().url().optional(),
 });
 
+// Fallbacks para evitar quebra se as vars não vierem do ambiente de build.
+const defaults = {
+  VITE_API_BASE: "https://barber-flow-production-c531.up.railway.app",
+  VITE_ENV: "production" as const,
+};
+
 const parsed = envSchema.safeParse({
-  VITE_API_BASE: import.meta.env.VITE_API_BASE,
-  VITE_ENV: import.meta.env.VITE_ENV,
+  VITE_API_BASE: import.meta.env.VITE_API_BASE || defaults.VITE_API_BASE,
+  VITE_ENV: import.meta.env.VITE_ENV || defaults.VITE_ENV,
   VITE_SENTRY_DSN: import.meta.env.VITE_SENTRY_DSN,
 });
 
