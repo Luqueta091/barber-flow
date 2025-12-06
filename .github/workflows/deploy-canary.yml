@@ -55,8 +55,7 @@ jobs:
           IMAGE_NAME: ${{ needs.build-and-push.outputs.image || env.IMAGE_NAME }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
         run: |
-          railway up --service "$RAILWAY_SERVICE" --image "$IMAGE_NAME" --environment "$RAILWAY_CANARY_ENV" --detach --token "$RAILWAY_TOKEN" \
-            || railway deploy --service "$RAILWAY_SERVICE" --image "$IMAGE_NAME" --environment "$RAILWAY_CANARY_ENV" --token "$RAILWAY_TOKEN"
+          railway deploy --service "$RAILWAY_SERVICE" --environment "$RAILWAY_CANARY_ENV" --detach --token "$RAILWAY_TOKEN" -- --image "$IMAGE_NAME"
 
       - name: Wait for canary to be healthy
         run: sleep 20
