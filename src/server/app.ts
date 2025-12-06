@@ -32,17 +32,19 @@ export function createApp() {
     const allowAll = allowedOrigins.includes("*");
 
     if (allowAll) {
-      res.header("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Origin", "*");
     } else if (origin && allowedOrigins.includes(origin)) {
-      res.header("Access-Control-Allow-Origin", origin);
-      res.header("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
     }
 
-    res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
-    res.header("Access-Control-Allow-Headers", req.headers["access-control-request-headers"] || "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", req.headers["access-control-request-headers"] || "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
 
     if (req.method === "OPTIONS") {
-      return res.sendStatus(204);
+      res.status(204).end();
+      return;
     }
     next();
   });
