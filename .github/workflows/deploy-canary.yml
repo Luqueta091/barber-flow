@@ -50,12 +50,19 @@ jobs:
       - name: Install Railway CLI
         run: npm i -g @railway/cli
 
+      - name: Link service context
+        env:
+          IMAGE_NAME: ${{ needs.build-and-push.outputs.image || env.IMAGE_NAME }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
+        run: |
+          railway link --service "$RAILWAY_SERVICE" --token "$RAILWAY_TOKEN"
+
       - name: Deploy canary (scale=1)
         env:
           IMAGE_NAME: ${{ needs.build-and-push.outputs.image || env.IMAGE_NAME }}
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
         run: |
-          railway deploy --service "$RAILWAY_SERVICE" --environment "$RAILWAY_CANARY_ENV" --detach --token "$RAILWAY_TOKEN" -- --image "$IMAGE_NAME"
+          railway deploy --environment "$RAILWAY_CANARY_ENV" --detach --token "$RAILWAY_TOKEN" -- --image "$IMAGE_NAME"
 
       - name: Wait for canary to be healthy
         run: sleep 20
@@ -75,4 +82,4 @@ jobs:
       - name: Rollback canary
         if: failure()
         run: |
-          railway down --service "$RAILWAY_SERVICE" --environment "$RAILWAY_CANARY_ENV" --token "$RAILWAY_TOKEN" || echo "Rollback command failed"
+          railway down --environment "$RAILWAY_CANARY_ENV" --token "$RAILWAY_TOKEN" || echo "Rollback command failed"
