@@ -1,5 +1,4 @@
 import express from "express";
-import cors from "cors";
 import { lockSlot, releaseSlot } from "./controllers/slots.js";
 import { getAvailability } from "./routes/availability.js";
 import { createAppointmentHandler } from "./routes/appointments.js";
@@ -21,11 +20,33 @@ import { metricsHandler } from "./metrics.js";
 
 export function createApp() {
   const app = express();
-  app.use(
-    cors({
-      origin: process.env.CORS_ORIGIN?.split(",").map((o) => o.trim()) || "*",
-    }),
-  );
+
+  // CORS manual para garantir header mesmo quando o proxy não repassa defaults
+  const allowedOrigins =
+    process.env.CORS_ORIGIN?.split(",")
+      .map((o) => o.trim())
+      .filter(Boolean) ?? ["*"];
+
+  app.use((req, res, next) => {
+    const origin = req.headers.origin as string | undefined;
+    const allowAll = allowedOrigins.includes("*");
+
+    if (allowAll) {
+      res.header("Access-Control-Allow-Origin", "*");
+    } else if (origin && allowedOrigins.includes(origin)) {
+      res.header("Access-Control-Allow-Origin", origin);
+      res.header("Vary", "Origin");
+    }
+
+    res.header("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
+    res.header("Access-Control-Allow-Headers", req.headers["access-control-request-headers"] || "Content-Type, Authorization");
+
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(204);
+    }
+    next();
+  });
+
   app.use(express.json());
 
   app.post("/slots/lock", lockSlot);
