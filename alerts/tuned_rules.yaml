@@ -1,0 +1,38 @@
+groups:
+  - name: barber-flow-tuned
+    rules:
+      - alert: BookingLatencyP99High
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{path="/bff/book"}[5m])) > 0.8
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "P99 /bff/book acima de 800ms"
+          description: "Verificar DB/Broker e cache hits."
+
+      - alert: SlotConflictRateHigh
+        expr: rate(http_requests_total{path="/slots/lock",status="409"}[5m]) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Muitos conflitos 409"
+          description: "Investigar capacidade/agenda ou explosão de tráfego."
+
+      - alert: BrokerBacklog
+        expr: rabbitmq_queue_messages_ready{queue="notifications.q"} > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Backlog em notifications.q"
+          description: "Escalar workers ou checar provider de notificação."
+
+      - alert: BrokerDLQ
+        expr: rabbitmq_queue_messages_ready{queue="notifications.dlq"} > 0
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "Mensagens na DLQ"
+          description: "Falha repetida de jobs; investigar provider/bug."

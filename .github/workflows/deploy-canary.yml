@@ -1,0 +1,44 @@
+name: Deploy Canary
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        default: "staging"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Deploy canary manifest
+        run: |
+          kubectl apply -f deployment/canary.yaml
+      - name: Smoke tests
+        run: |
+          node smoke-tests/smoke.js --base-url "${{ secrets.CANARY_BASE_URL }}"
+      - name: Archive logs
+        if: always()
+        run: |
+          kubectl get pods -o wide
+          kubectl logs deployment/barber-flow-web || true
+      - name: Promote or rollback
+        if: ${{ success() }}
+        run: |
+          echo "Promote deployment" # replace with real promotion steps
+      - name: Rollback on failure
+        if: ${{ failure() }}
+        run: |
+          kubectl rollout undo deployment/barber-flow-web

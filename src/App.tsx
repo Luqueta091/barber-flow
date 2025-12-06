@@ -17,6 +17,7 @@ import StaffDashboardPage from "./pages/StaffDashboardPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import ComponentsShowcase from "./pages/ComponentsShowcase";
+import DemoBooking from "./pages/DemoBooking";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
           <Route path="/componentes" element={<ComponentsShowcase />} />
+          <Route path="/demo-booking" element={<DemoBooking />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

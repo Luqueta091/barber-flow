@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: barber-flow-web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: barber-flow-web
+  template:
+    metadata:
+      labels:
+        app: barber-flow-web
+        version: canary
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/ORG/REPO/web:latest
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: barber-flow-web
+spec:
+  selector:
+    app: barber-flow-web
+  ports:
+    - port: 80
+      targetPort: 80

@@ -1,0 +1,29 @@
+groups:
+  - name: barber-flow
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "High error rate"
+          description: "5xx error rate > 5% over 5m"
+
+      - alert: BookingLatencyP99
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{path="/bff/book"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "P99 booking latency high"
+          description: "P99 > 1s for /bff/book"
+
+      - alert: CacheMissSpike
+        expr: rate(availability_cache_requests_total{status="miss"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Cache miss spike"
+          description: "High miss rate on availability cache"

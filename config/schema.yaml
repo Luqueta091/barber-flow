@@ -1,0 +1,44 @@
+app:
+  description: Frontend SPA (Vite)
+  env:
+    VITE_API_BASE:
+      required: true
+      description: Base URL do BFF/Backend para chamadas da SPA
+      example: "https://api.stg.barberflow.com"
+    VITE_ENV:
+      required: true
+      description: Ambiente de build (development|staging|production)
+      example: "staging"
+    VITE_SENTRY_DSN:
+      required: false
+      description: DSN do Sentry para erros de frontend
+      example: "https://example.ingest.sentry.io/123"
+backend:
+  description: Serviços de API/worker
+  env:
+    DATABASE_URL:
+      required: true
+      description: Postgres connection string (vem do Secrets Manager: secret db)
+      example: "postgresql://app_user:pwd@db-host:5432/barber_flow"
+    REDIS_URL:
+      required: true
+      description: Redis endpoint com auth (Secrets Manager: secret redis)
+      example: "rediss://:token@redis-host:6379/0"
+    BROKER_URL:
+      required: true
+      description: RabbitMQ URL com TLS (Secrets Manager: secret broker -> amqps_url)
+      example: "amqps://app-broker:pwd@mq-host:5671"
+    OBJECT_BUCKET:
+      required: true
+      description: Bucket S3 para uploads
+      example: "barber-flow-objects-123456789012"
+    SECRET_MANAGER_PREFIX:
+      required: true
+      description: Prefixo de secrets no AWS Secrets Manager
+      example: "barber-flow"
+    PORT:
+      required: false
+      description: Porta de bind do serviço HTTP
+      example: "3000"
+  fail_fast:
+    behavior: "Se variável obrigatória estiver ausente/empty, serviço não sobe (throw)."
