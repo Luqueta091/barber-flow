@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import { lockSlot, releaseSlot } from "./controllers/slots.js";
 import { getAvailability } from "./routes/availability.js";
 import { createAppointmentHandler } from "./routes/appointments.js";
@@ -20,6 +21,11 @@ import { metricsHandler } from "./metrics.js";
 
 export function createApp() {
   const app = express();
+  app.use(
+    cors({
+      origin: process.env.CORS_ORIGIN?.split(",").map((o) => o.trim()) || "*",
+    }),
+  );
   app.use(express.json());
 
   app.post("/slots/lock", lockSlot);
