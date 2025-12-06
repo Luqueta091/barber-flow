@@ -22,22 +22,9 @@ export function createApp() {
   const app = express();
 
   // CORS manual para garantir header mesmo quando o proxy não repassa defaults
-  const allowedOrigins =
-    process.env.CORS_ORIGIN?.split(",")
-      .map((o) => o.trim())
-      .filter(Boolean) ?? ["*"];
-
   app.use((req, res, next) => {
-    const origin = req.headers.origin as string | undefined;
-    const allowAll = allowedOrigins.includes("*");
-
-    if (allowAll) {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-    } else if (origin && allowedOrigins.includes(origin)) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-      res.setHeader("Vary", "Origin");
-    }
-
+    // Permite qualquer origem (ambiente controlado/POC). Se precisar restringir, trocar "*" pelos domínios esperados.
+    res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", req.headers["access-control-request-headers"] || "Content-Type, Authorization");
     res.setHeader("Access-Control-Allow-Credentials", "true");
