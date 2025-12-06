@@ -44,6 +44,7 @@ jobs:
       RAILWAY_CANARY_ENV: production-canary
       DESIRED_REPLICA_COUNT: 2
       CANARY_URL: ${{ secrets.CANARY_URL }}
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
@@ -51,18 +52,14 @@ jobs:
         run: npm i -g @railway/cli
 
       - name: Link service context
-        env:
-          IMAGE_NAME: ${{ needs.build-and-push.outputs.image || env.IMAGE_NAME }}
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
         run: |
-          railway link --service "$RAILWAY_SERVICE" --token "$RAILWAY_TOKEN"
+          railway link --service "$RAILWAY_SERVICE"
 
       - name: Deploy canary (scale=1)
         env:
           IMAGE_NAME: ${{ needs.build-and-push.outputs.image || env.IMAGE_NAME }}
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
         run: |
-          railway deploy --environment "$RAILWAY_CANARY_ENV" --detach --token "$RAILWAY_TOKEN" -- --image "$IMAGE_NAME"
+          railway deploy --environment "$RAILWAY_CANARY_ENV" --detach -- --image "$IMAGE_NAME"
 
       - name: Wait for canary to be healthy
         run: sleep 20
@@ -77,9 +74,9 @@ jobs:
       - name: Promote to production (scale up)
         if: success()
         run: |
-          railway services:scale "$RAILWAY_SERVICE" "$DESIRED_REPLICA_COUNT" --environment production --token "$RAILWAY_TOKEN" || echo "Scale command failed - verify service/environment names"
+          railway services:scale "$RAILWAY_SERVICE" "$DESIRED_REPLICA_COUNT" --environment production || echo "Scale command failed - verify service/environment names"
 
       - name: Rollback canary
         if: failure()
         run: |
-          railway down --environment "$RAILWAY_CANARY_ENV" --token "$RAILWAY_TOKEN" || echo "Rollback command failed"
+          railway down --environment "$RAILWAY_CANARY_ENV" || echo "Rollback command failed"
