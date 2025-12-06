@@ -1,44 +1,83 @@
-name: Deploy Canary
+name: Canary Deploy to Railway
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: "Target environment"
-        default: "staging"
-        required: true
-
-permissions:
-  contents: read
-  id-token: write
+  push:
+    branches:
+      - main
 
 jobs:
-  canary:
+  build-and-push:
+    name: Build & push Docker image
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute image tag (lowercase repo)
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}:v${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-      - name: Deploy canary manifest
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
+          context: .
+          file: deployment_scripts/Dockerfile
+          build-args: |
+            VITE_API_BASE=${{ secrets.VITE_API_BASE || 'http://localhost:5173' }}
+
+  canary-deploy:
+    name: Deploy canary to Railway
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    env:
+      RAILWAY_SERVICE: barber-flow-web # ajuste para o nome do serviço no Railway
+      RAILWAY_CANARY_ENV: production-canary
+      DESIRED_REPLICA_COUNT: 2
+      CANARY_URL: ${{ secrets.CANARY_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: curl -sL https://raw.githubusercontent.com/railwayapp/cli/master/install.sh | sh
+
+      - name: Login Railway
+        env:
+          RAILWAY_API_KEY: ${{ secrets.RAILWAY_API_KEY }}
+        run: railway login --apiKey "$RAILWAY_API_KEY"
+
+      - name: Deploy canary (scale=1)
+        env:
+          IMAGE_NAME: ${{ needs.build-and-push.outputs.image || env.IMAGE_NAME }}
         run: |
-          kubectl apply -f deployment/canary.yaml
-      - name: Smoke tests
+          railway up --service "$RAILWAY_SERVICE" --image "$IMAGE_NAME" --environment "$RAILWAY_CANARY_ENV" --detach \
+            || railway deploy --service "$RAILWAY_SERVICE" --image "$IMAGE_NAME" --environment "$RAILWAY_CANARY_ENV"
+
+      - name: Wait for canary to be healthy
+        run: sleep 20
+
+      - name: Run smoke tests against canary
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
         run: |
-          node smoke-tests/smoke.js --base-url "${{ secrets.CANARY_BASE_URL }}"
-      - name: Archive logs
-        if: always()
+          chmod +x tests/smoke/run_smoke_against.sh
+          tests/smoke/run_smoke_against.sh "$CANARY_URL"
+
+      - name: Promote to production (scale up)
+        if: success()
         run: |
-          kubectl get pods -o wide
-          kubectl logs deployment/barber-flow-web || true
-      - name: Promote or rollback
-        if: ${{ success() }}
+          railway services:scale "$RAILWAY_SERVICE" "$DESIRED_REPLICA_COUNT" --environment production || echo "Scale command failed - verify service/environment names"
+
+      - name: Rollback canary
+        if: failure()
         run: |
-          echo "Promote deployment" # replace with real promotion steps
-      - name: Rollback on failure
-        if: ${{ failure() }}
-        run: |
-          kubectl rollout undo deployment/barber-flow-web
+          railway down --service "$RAILWAY_SERVICE" --environment "$RAILWAY_CANARY_ENV" || echo "Rollback command failed"
