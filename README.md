@@ -62,9 +62,9 @@ This project is built with:
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Pipeline atual: push no GitHub → GitHub Actions builda e publica a imagem no GHCR → Railway (integração pull-based) detecta e faz deploy automático. Não estamos usando CLI nem token no CI.
 
-> Nota: smoke tests de canary foram temporariamente desabilitados; o deploy agora depende da integração do Railway (pull-based) ou de deploy manual. Consulte `/mnt/data/arquitetura_macro_sistema_de_agendamento_v_1_ryuji_morimoto.md` para referência de arquitetura e fluxos de ambientes.
+> Nota: smoke tests de canary seguem desabilitados; o deploy depende da integração pull-based do Railway ou de um deploy manual. Consulte `/mnt/data/arquitetura_macro_sistema_de_agendamento_v_1_ryuji_morimoto.md` para referência de arquitetura e fluxos de ambientes.
 
 ## Can I connect a custom domain to my Lovable project?
 

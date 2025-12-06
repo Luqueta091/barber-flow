@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -34,30 +33,3 @@ jobs:
           file: deployment_scripts/Dockerfile
           build-args: |
             VITE_API_BASE=${{ secrets.VITE_API_BASE || 'http://localhost:5173' }}
-
-  canary-deploy:
-    name: Deploy canary to Railway
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: ${{ secrets.RAILWAY_API_KEY != '' }}
-    env:
-      RAILWAY_SERVICE: barber-flow-web # ajuste para o nome do serviço no Railway
-      RAILWAY_CANARY_ENV: production-canary
-      DESIRED_REPLICA_COUNT: 2
-      CANARY_URL: ${{ secrets.CANARY_URL }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_KEY }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm i -g @railway/cli
-
-      - name: Link service context
-        run: |
-          railway link --service "$RAILWAY_SERVICE"
-
-      - name: Deploy canary (scale=1)
-        env:
-          IMAGE_NAME: ${{ needs.build-and-push.outputs.image || env.IMAGE_NAME }}
-        run: |
-          railway deploy --environment "$RAILWAY_CANARY_ENV" --detach -- --image "$IMAGE_NAME"
