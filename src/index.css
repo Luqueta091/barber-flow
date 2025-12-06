@@ -115,6 +115,12 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
   }
+
+  .hero-gradient {
+    background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.12), transparent 25%),
+      radial-gradient(circle at 80% 0%, rgba(56, 189, 248, 0.12), transparent 20%),
+      linear-gradient(135deg, rgba(226, 232, 240, 0.6) 0%, rgba(241, 245, 249, 0.9) 100%);
+  }
 }
 
 @layer components {
