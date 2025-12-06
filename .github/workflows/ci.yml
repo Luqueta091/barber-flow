@@ -62,6 +62,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Compute image tag
+        run: echo "IMAGE_TAG=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/barber-flow-web:latest" >> $GITHUB_ENV
+
       - name: Login to GHCR
         uses: docker/login-action@v3
         with:
@@ -73,7 +76,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/barber-flow-web:latest
+          tags: ${{ env.IMAGE_TAG }}
           context: .
           file: deployment_scripts/Dockerfile
           build-args: |
