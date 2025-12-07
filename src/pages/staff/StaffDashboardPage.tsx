@@ -144,7 +144,7 @@ export default function StaffDashboardPage() {
         console.error(err);
       }
     })();
-  }, [apiFetch, reloadAppointments, reloadSlots, session]);
+  }, [apiFetch, reloadAppointments, reloadSlots, reloadBlocks, session]);
 
   useEffect(() => {
     if (!selectedBarberId && barbers.length) {
@@ -210,9 +210,18 @@ export default function StaffDashboardPage() {
 
   const handleCreateBlock = async (block: Omit<Block, "id">) => {
     try {
-      const newBlock: Block = { id: crypto.randomUUID(), ...block };
-      setBlocks((prev) => [...prev, newBlock]);
-      // Em backend real, chamar endpoint de bloqueio
+      if (!unitId) {
+        alert("Selecione uma unidade para criar bloqueios.");
+        return;
+      }
+      const startDateTime = `${selectedDate}T${block.start}`;
+      const endDateTime = `${selectedDate}T${block.end}`;
+      const res = await apiFetch("/admin/blocks", {
+        method: "POST",
+        body: JSON.stringify({ unitId, startAt: startDateTime, endAt: endDateTime, reason: block.reason }),
+      });
+      setBlocks((prev) => [...prev, { id: res.id, start: block.start, end: block.end, reason: block.reason }]);
+      await reloadSlots();
     } catch (err) {
       console.error(err);
     }
@@ -220,8 +229,9 @@ export default function StaffDashboardPage() {
 
   const handleRemoveBlock = async (id: string) => {
     try {
+      await apiFetch(`/admin/blocks/${id}`, { method: "DELETE" });
       setBlocks((prev) => prev.filter((b) => b.id !== id));
-      // Chamada de remoção no backend, se existir
+      await reloadSlots();
     } catch (err) {
       console.error(err);
     }

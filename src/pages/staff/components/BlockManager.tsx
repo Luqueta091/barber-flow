@@ -106,7 +106,7 @@ export function BlockManager({ blocks, selectedDate, onDateChange, onCreate, onR
             </button>
           </div>
         ))}
-        {blocks.length === 0 && <div className="text-slate-500 text-sm">Nenhum bloqueio ativo hoje.</div>}
+        {blocks.length === 0 && <div className="text-slate-500 text-sm">Nenhum bloqueio ativo nesta data.</div>}
       </div>
     </div>
   );
