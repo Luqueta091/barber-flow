@@ -19,17 +19,11 @@ const FALLBACK_SERVICES: Service[] = [
   { id: "s2", name: "Barba Terapia", price: 45, durationMin: 30, description: "Toalha quente, massagem facial e hidratação" },
 ];
 
-const FALLBACK_BARBERS: Barber[] = [
-  { id: "b1", name: "Carlos", specialty: "Corte clássico" },
-  { id: "b2", name: "Marcos", specialty: "Fade / Navalhado" },
-  { id: "b3", name: "Rafael", specialty: "Barba e cuidados" },
-];
-
 export function BookingFlowPage() {
   const [view, setView] = useState<ViewState>("dashboard");
   const [units, setUnits] = useState<Unit[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [barbers] = useState<Barber[]>(FALLBACK_BARBERS);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -57,7 +51,7 @@ export function BookingFlowPage() {
     (async () => {
       try {
         const unitsRes = await apiFetch("/admin/units");
-        setUnits(unitsRes.data ?? []);
+        setUnits(Array.isArray(unitsRes.data) ? unitsRes.data : []);
       } catch {
         setUnits([]);
       }
@@ -65,7 +59,7 @@ export function BookingFlowPage() {
       try {
         const servicesRes = await apiFetch("/admin/services");
         setServices(
-          (servicesRes.data ?? []).map((s: any) => ({
+          (Array.isArray(servicesRes.data) ? servicesRes.data : []).map((s: any) => ({
             id: s.id,
             name: s.name,
             price: Number(s.price ?? 0),
@@ -76,6 +70,13 @@ export function BookingFlowPage() {
         );
       } catch {
         setServices([]);
+      }
+
+      try {
+        const barbersRes = await apiFetch("/admin/barbers");
+        setBarbers(Array.isArray(barbersRes.data) ? barbersRes.data : []);
+      } catch {
+        setBarbers([]);
       }
     })();
   }, [apiFetch]);
