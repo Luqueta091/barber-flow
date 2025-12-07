@@ -54,33 +54,28 @@ export function BookingFlowPage() {
   );
 
   useEffect(() => {
-    // Carrega unidades/serviços; se vazio, usa fallback
     (async () => {
       try {
         const unitsRes = await apiFetch("/admin/units");
-        setUnits(unitsRes.data?.length ? unitsRes.data : FALLBACK_UNITS);
+        setUnits(unitsRes.data ?? []);
       } catch {
-        setUnits(FALLBACK_UNITS);
+        setUnits([]);
       }
 
       try {
         const servicesRes = await apiFetch("/admin/services");
-        if (servicesRes.data?.length) {
-          setServices(
-            servicesRes.data.map((s: any) => ({
-              id: s.id,
-              name: s.name,
-              price: s.price ?? 60,
-              durationMin: s.durationMinutes ?? 30,
-              description: s.description,
-              unitId: s.unitId,
-            })),
-          );
-        } else {
-          setServices(FALLBACK_SERVICES);
-        }
+        setServices(
+          (servicesRes.data ?? []).map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            price: s.price ?? 0,
+            durationMin: s.durationMinutes ?? 30,
+            description: s.description,
+            unitId: s.unitId,
+          })),
+        );
       } catch {
-        setServices(FALLBACK_SERVICES);
+        setServices([]);
       }
     })();
   }, [apiFetch]);

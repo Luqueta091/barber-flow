@@ -4,6 +4,7 @@ import { getAvailability } from "./routes/availability.js";
 import { createAppointmentHandler } from "./routes/appointments.js";
 import { requestOtpHandler, verifyOtpHandler } from "./routes/auth.js";
 import { createUserHandler, getUserHandler, updateUserHandler, deleteUserHandler, searchUserHandler } from "./routes/users.js";
+import { initSchema } from "./db.js";
 import {
   createUnitHandler,
   updateUnitHandler,
@@ -83,9 +84,16 @@ export function createApp() {
 
 // Allow running standalone: node dist/server/app.js
 if (process.env.START_SERVER === "true") {
-  const app = createApp();
-  const port = process.env.PORT ?? 3001;
-  app.listen(port, () => {
-    console.log(`API listening on ${port}`);
-  });
+  initSchema()
+    .then(() => {
+      const app = createApp();
+      const port = process.env.PORT ?? 3001;
+      app.listen(port, () => {
+        console.log(`API listening on ${port}`);
+      });
+    })
+    .catch((err) => {
+      console.error("Failed to init schema", err);
+      process.exit(1);
+    });
 }
