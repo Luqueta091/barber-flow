@@ -9,6 +9,7 @@ export type Unit = {
   closeTime?: string;
   capacity?: number;
   isActive?: boolean;
+  daysOfWeek?: string[];
 };
 
 export type Service = {
@@ -18,13 +19,24 @@ export type Service = {
   durationMinutes: number;
   bufferAfterMinutes: number;
   capacity: number;
+  price?: number;
+  image?: string;
+};
+
+export type Barber = {
+  id: string;
+  name: string;
+  contact?: string;
+  units?: string[];
+  isActive?: boolean;
 };
 
 const units = new Map<string, Unit>();
 const services = new Map<string, Service>();
+const barbers = new Map<string, Barber>();
 
 export const adminStore = {
-  createUnit(input: { name: string; timezone: string; address?: string }): Unit {
+  createUnit(input: Omit<Unit, "id">): Unit {
     const u: Unit = { id: uuid(), isActive: true, ...input };
     units.set(u.id, u);
     return u;
@@ -67,8 +79,27 @@ export const adminStore = {
   listServices(unitId?: string): Service[] {
     return Array.from(services.values()).filter((s) => (unitId ? s.unitId === unitId : true));
   },
+  createBarber(input: Omit<Barber, "id">): Barber {
+    const b: Barber = { id: uuid(), isActive: true, ...input };
+    barbers.set(b.id, b);
+    return b;
+  },
+  updateBarber(id: string, input: Partial<Omit<Barber, "id">>): Barber | null {
+    const existing = barbers.get(id);
+    if (!existing) return null;
+    const updated = { ...existing, ...input };
+    barbers.set(id, updated);
+    return updated;
+  },
+  deleteBarber(id: string): boolean {
+    return barbers.delete(id);
+  },
+  listBarbers(): Barber[] {
+    return Array.from(barbers.values());
+  },
   clear() {
     units.clear();
     services.clear();
+    barbers.clear();
   },
 };

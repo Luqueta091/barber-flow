@@ -13,6 +13,10 @@ import {
   updateServiceHandler,
   deleteServiceHandler,
   listServicesHandler,
+  createBarberHandler,
+  updateBarberHandler,
+  deleteBarberHandler,
+  listBarbersHandler,
 } from "./routes/admin.js";
 import { subscribePushHandler, listPushHandler } from "./routes/push.js";
 import { bffAvailabilityHandler, bffBookHandler } from "./routes/bff.js";
@@ -60,6 +64,10 @@ export function createApp() {
   app.get("/admin/services", listServicesHandler);
   app.put("/admin/services/:id", updateServiceHandler);
   app.delete("/admin/services/:id", deleteServiceHandler);
+  app.post("/admin/barbers", createBarberHandler);
+  app.get("/admin/barbers", listBarbersHandler);
+  app.put("/admin/barbers/:id", updateBarberHandler);
+  app.delete("/admin/barbers/:id", deleteBarberHandler);
   // Push subscriptions
   app.post("/push/subscribe", subscribePushHandler);
   app.get("/push/subscriptions", listPushHandler);

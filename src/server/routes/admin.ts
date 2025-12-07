@@ -11,6 +11,7 @@ const unitSchema = z.object({
   closeTime: z.string().optional(),
   capacity: z.number().int().positive().optional(),
   isActive: z.boolean().optional(),
+  daysOfWeek: z.array(z.string()).optional(),
 });
 
 const serviceSchema = z.object({
@@ -19,6 +20,15 @@ const serviceSchema = z.object({
   durationMinutes: z.number().int().positive(),
   bufferAfterMinutes: z.number().int().nonnegative(),
   capacity: z.number().int().positive(),
+  price: z.number().nonnegative().optional(),
+  image: z.string().optional(),
+});
+
+const barberSchema = z.object({
+  name: z.string().min(1),
+  contact: z.string().optional(),
+  units: z.array(z.string()).optional(),
+  isActive: z.boolean().optional(),
 });
 
 export function createUnitHandler(req: Request, res: Response) {
@@ -77,4 +87,29 @@ export function deleteServiceHandler(req: Request, res: Response) {
 export function listServicesHandler(req: Request, res: Response) {
   const unitId = req.query.unitId as string | undefined;
   return res.json({ data: adminStore.listServices(unitId) });
+}
+
+export function createBarberHandler(req: Request, res: Response) {
+  const parsed = barberSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
+  const barber = adminStore.createBarber(parsed.data);
+  return res.status(201).json(barber);
+}
+
+export function updateBarberHandler(req: Request, res: Response) {
+  const parsed = barberSchema.partial().safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
+  const barber = adminStore.updateBarber(req.params.id, parsed.data);
+  if (!barber) return res.status(404).json({ error: "not_found" });
+  return res.json(barber);
+}
+
+export function deleteBarberHandler(req: Request, res: Response) {
+  const ok = adminStore.deleteBarber(req.params.id);
+  if (!ok) return res.status(404).json({ error: "not_found" });
+  return res.status(204).send();
+}
+
+export function listBarbersHandler(_req: Request, res: Response) {
+  return res.json({ data: adminStore.listBarbers() });
 }

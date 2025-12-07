@@ -59,6 +59,13 @@ export default function AdminPanelPage() {
       } catch (e) {
         console.error(e);
         setServices([]);
+      }
+      try {
+        const barbersRes = await api.get("/admin/barbers");
+        setBarbers(barbersRes.data?.length ? barbersRes.data : mockBarbers);
+      } catch (e) {
+        console.error(e);
+        setBarbers(mockBarbers);
       } finally {
         setLoading(false);
       }
@@ -107,9 +114,19 @@ export default function AdminPanelPage() {
         durationMinutes: input.durationMinutes || 30,
         bufferAfterMinutes: input.bufferAfterMinutes ?? 0,
         capacity: input.capacity || 1,
+        price: input.price ?? 0,
+        image: input.image,
       };
       const res = await api.send("/admin/services", "POST", payload);
       setServices((prev) => [...prev, res]);
+    },
+    [api],
+  );
+
+  const updateService = useCallback(
+    async (id: string, input: Partial<Service>) => {
+      const res = await api.send(`/admin/services/${id}`, "PUT", input);
+      setServices((prev) => prev.map((s) => (s.id === id ? res : s)));
     },
     [api],
   );
@@ -118,6 +135,36 @@ export default function AdminPanelPage() {
     async (id: string) => {
       await api.send(`/admin/services/${id}`, "DELETE");
       setServices((prev) => prev.filter((s) => s.id !== id));
+    },
+    [api],
+  );
+
+  const createBarber = useCallback(
+    async (input: Partial<Barber>) => {
+      const payload = {
+        name: input.name || "Barbeiro",
+        contact: input.contact,
+        units: input.units ?? [],
+        isActive: input.isActive ?? true,
+      };
+      const res = await api.send("/admin/barbers", "POST", payload);
+      setBarbers((prev) => [...prev, res]);
+    },
+    [api],
+  );
+
+  const updateBarber = useCallback(
+    async (id: string, input: Partial<Barber>) => {
+      const res = await api.send(`/admin/barbers/${id}`, "PUT", input);
+      setBarbers((prev) => prev.map((b) => (b.id === id ? res : b)));
+    },
+    [api],
+  );
+
+  const deleteBarber = useCallback(
+    async (id: string) => {
+      await api.send(`/admin/barbers/${id}`, "DELETE");
+      setBarbers((prev) => prev.filter((b) => b.id !== id));
     },
     [api],
   );
@@ -144,12 +191,27 @@ export default function AdminPanelPage() {
           {tab === "units" && (
             <UnitsSection
               units={units}
-              onCreate={() => createUnit({ name: "Nova unidade", timezone: defaultTimezone })}
+              onCreate={() => {
+                const name = window.prompt("Nome da unidade", "Nova unidade") || "Nova unidade";
+                const address = window.prompt("Endereço", "") || "";
+                const openTime = window.prompt("Hora de abertura (HH:mm)", "09:00") || "09:00";
+                const closeTime = window.prompt("Hora de fechamento (HH:mm)", "18:00") || "18:00";
+                const capacity = Number(window.prompt("Capacidade por hora", "1") || 1);
+                createUnit({ name, address, openTime, closeTime, capacity, timezone: defaultTimezone });
+              }}
               onDelete={deleteUnit}
               onToggle={(id) => {
                 const unit = units.find((u) => u.id === id);
                 if (!unit) return;
                 updateUnit(id, { isActive: !unit.isActive });
+              }}
+              onEdit={(u) => {
+                const name = window.prompt("Nome da unidade", u.name) || u.name;
+                const address = window.prompt("Endereço", u.address || "") || u.address;
+                const openTime = window.prompt("Hora de abertura", u.openTime || "09:00") || u.openTime;
+                const closeTime = window.prompt("Hora de fechamento", u.closeTime || "18:00") || u.closeTime;
+                const capacity = Number(window.prompt("Capacidade por hora", String(u.capacity ?? 1)) || u.capacity || 1);
+                updateUnit(u.id, { name, address, openTime, closeTime, capacity });
               }}
             />
           )}
@@ -160,13 +222,37 @@ export default function AdminPanelPage() {
               units={units}
               onCreate={() => {
                 if (!units[0]) return;
-                createService({ unitId: units[0].id, name: "Novo serviço", durationMinutes: 30, bufferAfterMinutes: 0, capacity: 1 });
+                const name = window.prompt("Nome do serviço", "Novo serviço") || "Novo serviço";
+                const price = Number(window.prompt("Preço", "0") || 0);
+                const duration = Number(window.prompt("Duração (min)", "30") || 30);
+                createService({ unitId: units[0].id, name, durationMinutes: duration, bufferAfterMinutes: 0, capacity: 1, price });
               }}
               onDelete={deleteService}
+              onEdit={(svc) => {
+                const name = window.prompt("Nome do serviço", svc.name) || svc.name;
+                const price = Number(window.prompt("Preço", String(svc.price ?? 0)) || svc.price || 0);
+                const duration = Number(window.prompt("Duração (min)", String(svc.durationMinutes)) || svc.durationMinutes);
+                updateService(svc.id, { name, price, durationMinutes: duration });
+              }}
             />
           )}
 
-          {tab === "barbers" && <BarbersSection barbers={barbers} />}
+          {tab === "barbers" && (
+            <BarbersSection
+              barbers={barbers}
+              onCreate={() => {
+                const name = window.prompt("Nome do barbeiro", "Barbeiro") || "Barbeiro";
+                const contact = window.prompt("Contato", "") || "";
+                createBarber({ name, contact, units: units.map((u) => u.id) });
+              }}
+              onEdit={(b) => {
+                const name = window.prompt("Nome", b.name) || b.name;
+                const contact = window.prompt("Contato", b.contact || "") || b.contact;
+                updateBarber(b.id, { name, contact });
+              }}
+              onDelete={deleteBarber}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -189,11 +275,13 @@ function UnitsSection({
   onCreate,
   onDelete,
   onToggle,
+  onEdit,
 }: {
   units: Unit[];
   onCreate: () => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
+  onEdit: (u: Unit) => void;
 }) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
@@ -220,6 +308,9 @@ function UnitsSection({
               <button onClick={() => onToggle(u.id)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">
                 Alternar
               </button>
+              <button onClick={() => onEdit(u)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                Editar
+              </button>
               <button onClick={() => onDelete(u.id)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100">
                 Remover
               </button>
@@ -237,11 +328,13 @@ function ServicesSection({
   units,
   onCreate,
   onDelete,
+  onEdit,
 }: {
   services: Service[];
   units: Unit[];
   onCreate: () => void;
   onDelete: (id: string) => void;
+  onEdit: (s: Service) => void;
 }) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
@@ -272,6 +365,12 @@ function ServicesSection({
                   <td className="py-3 pr-4">{s.capacity}</td>
                   <td className="py-3 pr-4">{unit?.name || s.unitId}</td>
                   <td className="py-3 pr-4">
+                    <button
+                      onClick={() => onEdit(s)}
+                      className="mr-2 px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                    >
+                      Editar
+                    </button>
                     <button onClick={() => onDelete(s.id)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100">
                       Remover
                     </button>
@@ -293,12 +392,24 @@ function ServicesSection({
   );
 }
 
-function BarbersSection({ barbers }: { barbers: Barber[] }) {
+function BarbersSection({
+  barbers,
+  onCreate,
+  onEdit,
+  onDelete,
+}: {
+  barbers: Barber[];
+  onCreate: () => void;
+  onEdit: (b: Barber) => void;
+  onDelete: (id: string) => void;
+}) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-bold text-slate-900">Barbeiros</h3>
-        <span className="text-sm text-slate-500">Somente visual (mock)</span>
+        <button onClick={onCreate} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all">
+          + Barbeiro
+        </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {barbers.map((b) => (
@@ -306,6 +417,14 @@ function BarbersSection({ barbers }: { barbers: Barber[] }) {
             <div className="font-bold text-slate-900 text-lg">{b.name}</div>
             {b.contact && <div className="text-slate-500 text-sm">{b.contact}</div>}
             <div className="text-xs text-slate-500 mt-1">Unidades: {b.units?.length ? b.units.join(", ") : "Não vinculado"}</div>
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => onEdit(b)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+                Editar
+              </button>
+              <button onClick={() => onDelete(b.id)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100">
+                Remover
+              </button>
+            </div>
           </div>
         ))}
         {barbers.length === 0 && <div className="text-slate-500 text-sm">Nenhum barbeiro cadastrado.</div>}
