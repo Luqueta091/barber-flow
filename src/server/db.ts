@@ -45,4 +45,31 @@ export async function initSchema() {
       is_active BOOLEAN DEFAULT true
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reservations (
+      token UUID PRIMARY KEY,
+      unit_id UUID NOT NULL,
+      service_id UUID NOT NULL,
+      start_at TIMESTAMPTZ NOT NULL,
+      end_at TIMESTAMPTZ NOT NULL,
+      status TEXT NOT NULL DEFAULT 'locked',
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS appointments (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL,
+      unit_id UUID NOT NULL,
+      service_id UUID NOT NULL,
+      start_at TIMESTAMPTZ NOT NULL,
+      end_at TIMESTAMPTZ NOT NULL,
+      status TEXT NOT NULL DEFAULT 'scheduled',
+      reservation_token UUID,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
 }

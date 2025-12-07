@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { availabilityCache } from "../../modules/availability/cache/index.js";
-import { reservationsStore } from "../store.js";
+import { lockReservation, releaseReservation } from "../repositories/reservationsRepo.js";
 
 const lockSchema = z.object({
   unitId: z.string().min(1),
@@ -19,7 +19,7 @@ export async function lockSlot(req: Request, res: Response) {
 
   const { unitId, serviceId, startAt, endAt, ttlSeconds } = parsed.data;
   try {
-    const reservation = reservationsStore.lock({ unitId, serviceId, startAt, endAt, ttlSeconds });
+    const reservation = await lockReservation({ unitId, serviceId, startAt, endAt, ttlSeconds });
     // Invalida cache de disponibilidade para o dia do slot
     const dateKey = startAt.toISOString().slice(0, 10);
     await availabilityCache.invalidate({ unitId, serviceId, date: dateKey });
@@ -48,7 +48,6 @@ export async function releaseSlot(req: Request, res: Response) {
   }
 
   const { token } = parsed.data;
-  reservationsStore.release(token);
-  // Não sabemos o slot; invalida por unidade seria ideal se token tivesse metadata. Mantemos simples aqui.
+  await releaseReservation(token);
   return res.status(200).json({ status: "released" });
 }

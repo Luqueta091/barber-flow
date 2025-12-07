@@ -2,8 +2,9 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { availabilityCache } from "../../modules/availability/cache/index.js";
 import { generateSlots } from "../../modules/availability/domain/slotGenerator.js";
-import { reservationsStore, appointmentStore, eventPublisher } from "../store.js";
-import { createAppointment } from "../../modules/scheduling/domain/appointment.js";
+import { availabilityCache } from "../../modules/availability/cache/index.js";
+import { lockReservation, confirmReservation } from "../repositories/reservationsRepo.js";
+import { createAppointment as createAppointmentDb } from "../repositories/appointmentsRepo.js";
 import type { EventEnvelope } from "../../../events/publisher.js";
 import { v4 as uuid } from "uuid";
 
@@ -47,9 +48,10 @@ export async function bffBookHandler(req: Request, res: Response) {
   const { userId, unitId, serviceId, startAt, endAt } = parsed.data;
 
   try {
-    const reservation = reservationsStore.lock({ unitId, serviceId, startAt, endAt, ttlSeconds: 300 });
-    const apptResult = createAppointment({
-      id: uuid(),
+    const reservation = await lockReservation({ unitId, serviceId, startAt, endAt, ttlSeconds: 300 });
+    await confirmReservation(reservation.token);
+
+    const appointment = await createAppointmentDb({
       userId,
       unitId,
       serviceId,
@@ -57,10 +59,6 @@ export async function bffBookHandler(req: Request, res: Response) {
       endAt,
       reservationToken: reservation.token,
     });
-    if (!apptResult.ok) return res.status(400).json({ error: apptResult.error });
-
-    reservationsStore.confirm(reservation.token);
-    appointmentStore.add(apptResult.value);
 
     const event: EventEnvelope = {
       type: "AppointmentCreated",
@@ -68,7 +66,7 @@ export async function bffBookHandler(req: Request, res: Response) {
       id: uuid(),
       occurredAt: new Date().toISOString(),
       payload: {
-        appointmentId: apptResult.value.id,
+        appointmentId: appointment.id,
         userId,
         unitId,
         serviceId,
@@ -81,7 +79,7 @@ export async function bffBookHandler(req: Request, res: Response) {
 
     await availabilityCache.invalidate({ unitId, serviceId, date: startAt.toISOString().slice(0, 10) });
 
-    return res.status(201).json({ appointmentId: apptResult.value.id, reservationToken: reservation.token });
+    return res.status(201).json({ appointmentId: appointment.id, reservationToken: reservation.token });
   } catch (e: unknown) {
     const err = e as { message?: string } | undefined;
     if (err?.message === "slot_conflict") return res.status(409).json({ error: "slot_conflict" });
