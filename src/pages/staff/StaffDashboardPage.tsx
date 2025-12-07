@@ -14,6 +14,7 @@ export default function StaffDashboardPage() {
     const raw = localStorage.getItem(SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   }, []);
+  const [isReady, setIsReady] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
 
   const [unitId, setUnitId] = useState<string>("");
@@ -22,6 +23,7 @@ export default function StaffDashboardPage() {
   const [selectedBarberId, setSelectedBarberId] = useState<string>("");
   const [units, setUnits] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [isReady, setIsReady] = useState(false);
   const [view, setView] = useState<"agenda" | "bloqueios" | "slots" | "notificacoes">("agenda");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -44,6 +46,7 @@ export default function StaffDashboardPage() {
   );
   const reloadAppointments = useCallback(
     async (options?: { unitList?: any[]; serviceList?: any[]; barberList?: any[]; barberId?: string }) => {
+      if (!isReady) return;
       const unitList = options?.unitList ?? units;
       const serviceList = options?.serviceList ?? services;
       const barberList = options?.barberList ?? barbers;
@@ -68,23 +71,23 @@ export default function StaffDashboardPage() {
       });
       setAppointments(appointmentsData);
     },
-    [apiFetch, barbers, selectedBarberId, services, units, selectedDate],
+    [apiFetch, barbers, selectedBarberId, services, units, selectedDate, isReady],
   );
 
   const reloadBlocks = useCallback(async () => {
     try {
-      if (!unitId) return;
+      if (!unitId || !isReady) return;
       const res = await apiFetch(`/admin/blocks?unitId=${unitId}&date=${selectedDate}`);
       const data: Block[] = (res.data ?? []).map((b: any) => ({ ...b, start: b.startAt ?? b.start, end: b.endAt ?? b.end }));
       setBlocks(data);
     } catch (err) {
       console.error(err);
     }
-  }, [apiFetch, unitId, selectedDate]);
+  }, [apiFetch, unitId, selectedDate, isReady]);
 
   const reloadSlots = useCallback(async () => {
     try {
-      if (!unitId || !serviceId) return;
+      if (!unitId || !serviceId || !isReady) return;
       const res = await apiFetch(`/units/${unitId}/availability?serviceId=${serviceId}&startDate=${selectedDate}&endDate=${selectedDate}`);
       const apiSlots: Slot[] =
         res.data?.[0]?.slots?.map((s: any, idx: number) => ({
@@ -132,26 +135,22 @@ export default function StaffDashboardPage() {
         } else {
           if (unitList[0]) setUnitId(unitList[0].id);
         }
-        await reloadAppointments({
-          unitList,
-          serviceList,
-          barberList,
-          barberId: sessionBarberId || barberList[0]?.id,
-        });
-        await reloadBlocks();
-        await reloadSlots();
+        setIsReady(true);
       } catch (err) {
         console.error(err);
       }
     })();
-  }, [apiFetch, reloadAppointments, reloadSlots, reloadBlocks, session]);
+  }, [apiFetch, session]);
 
   useEffect(() => {
+    if (!isReady) return;
     if (!selectedBarberId && barbers.length) {
       setSelectedBarberId(session?.barber?.id || barbers[0].id);
     }
-    reloadAppointments().catch((err) => console.error(err));
-  }, [selectedBarberId, reloadAppointments, barbers, session]);
+    reloadAppointments();
+    reloadBlocks();
+    reloadSlots();
+  }, [isReady, selectedDate, unitId, serviceId, selectedBarberId, reloadAppointments, reloadBlocks, reloadSlots, barbers, session]);
 
   const handleToggleSlot = async (slot: Slot) => {
     try {
