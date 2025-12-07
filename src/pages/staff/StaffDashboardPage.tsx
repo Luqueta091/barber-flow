@@ -38,12 +38,25 @@ export default function StaffDashboardPage() {
   );
 
   useEffect(() => {
-    // Para demo, usa agenda fake; para produção, criaria endpoint GET /agendamentos?date=...
-    setAppointments([
-      { id: "a1", clientName: "João", serviceName: "Corte", startAt: new Date().toISOString(), status: "scheduled" },
-      { id: "a2", clientName: "Maria", serviceName: "Barba", startAt: new Date(Date.now() + 3600_000).toISOString(), status: "scheduled" },
-    ]);
-    // Slots iniciais (pode vir de GET /units/:id/availability)
+    // Carrega appointments reais (hoje)
+    (async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const res = await apiFetch(`/appointments?date=${today}`);
+        const data: Appointment[] = (res.data ?? []).map((a: any) => ({
+          id: a.id,
+          clientName: a.userId || "Cliente",
+          serviceName: a.serviceId,
+          startAt: a.startAt,
+          status: a.status || "scheduled",
+        }));
+        setAppointments(data);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+
+    // Slots iniciais simples
     setSlots(
       Array.from({ length: 8 }).map((_, i) => {
         const start = new Date();
@@ -52,7 +65,7 @@ export default function StaffDashboardPage() {
         return { id: `slot-${i}`, start: start.toISOString(), end: end.toISOString(), state: i % 3 === 0 ? "booked" : "free" };
       }),
     );
-  }, []);
+  }, [apiFetch]);
 
   const reloadSlots = useCallback(async () => {
     try {

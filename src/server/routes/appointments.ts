@@ -1,9 +1,8 @@
 import type { Request, Response } from "express";
-import { v4 as uuid } from "uuid";
 import { z } from "zod";
-import { reservationsStore, appointmentStore, eventPublisher } from "../store.js";
-import { createAppointment } from "../../modules/scheduling/domain/appointment.js";
-import type { EventEnvelope } from "../../../events/publisher.js";
+import { lockReservation, confirmReservation } from "../repositories/reservationsRepo.js";
+import { createAppointment as createAppointmentDb, listAppointments } from "../repositories/appointmentsRepo.js";
+import { v4 as uuid } from "uuid";
 
 const createSchema = z.object({
   userId: z.string().min(1),
@@ -23,63 +22,24 @@ export async function createAppointmentHandler(req: Request, res: Response) {
 
   const { reservationToken, ...cmd } = parsed.data;
 
-  // idempotency check (deve responder antes de validar reserva para permitir replays)
-  if (parsed.data.idempotencyKey) {
-    const existing = appointmentStore.findByIdempotencyKey(parsed.data.idempotencyKey);
-    if (existing) {
-      return res.status(200).json({ id: existing.id, status: existing.status });
-    }
+  try {
+    // garante que a reserva existe
+    await confirmReservation(reservationToken);
+    const appt = await createAppointmentDb({ ...cmd, reservationToken });
+    return res.status(201).json({ id: appt.id, status: appt.status });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "internal_error" });
   }
+}
 
-  const reservation = reservationsStore.getActive(reservationToken);
-  if (!reservation) {
-    return res.status(409).json({ error: "invalid_or_expired_reservation" });
+export async function listAppointmentsHandler(req: Request, res: Response) {
+  const date = (req.query.date as string | undefined) || undefined;
+  try {
+    const data = await listAppointments(date);
+    return res.json({ data });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "internal_error" });
   }
-
-  // ensure slot matches reservation
-  if (
-    reservation.unitId !== cmd.unitId ||
-    reservation.serviceId !== cmd.serviceId ||
-    reservation.startAt.getTime() !== cmd.startAt.getTime() ||
-    reservation.endAt.getTime() !== cmd.endAt.getTime()
-  ) {
-    return res.status(409).json({ error: "slot_mismatch" });
-  }
-
-  const domain = createAppointment({
-    id: uuid(),
-    ...cmd,
-    reservationToken,
-  });
-  if (!domain.ok) {
-    return res.status(400).json({ error: domain.error });
-  }
-
-  // confirm reservation and persist
-  const confirmed = reservationsStore.confirm(reservationToken);
-  if (!confirmed) {
-    return res.status(409).json({ error: "reservation_conflict" });
-  }
-
-  const appt = domain.value;
-  appointmentStore.add({ ...appt, idempotencyKey: parsed.data.idempotencyKey });
-
-  const event: EventEnvelope = {
-    type: "AppointmentCreated",
-    version: "v1",
-    id: uuid(),
-    occurredAt: new Date().toISOString(),
-    payload: {
-      appointmentId: appt.id,
-      userId: appt.userId,
-      unitId: appt.unitId,
-      serviceId: appt.serviceId,
-      startAt: appt.startAt,
-      endAt: appt.endAt,
-      reservationToken,
-    },
-  };
-  await eventPublisher.publish(event);
-
-  return res.status(201).json({ id: appt.id, status: appt.status });
 }
