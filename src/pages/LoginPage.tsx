@@ -76,7 +76,11 @@ const CalendarIcon = () => (
 
 const SESSION_KEY = "barber-flow-session";
 
-export default function LoginPage() {
+interface Props {
+  onLogin?: () => void;
+}
+
+export default function LoginPage({ onLogin }: Props) {
   const [activeRole, setActiveRole] = useState<UserRole>(UserRole.CLIENT);
   const [clientForm, setClientForm] = useState<ClientLoginForm>({ name: "", phone: "" });
   const [staffForm, setStaffForm] = useState<StaffLoginForm>({ email: "", password: "" });
@@ -110,6 +114,7 @@ export default function LoginPage() {
       const user = await postUser({ fullName: clientForm.name, phone: clientForm.phone });
       saveSession({ role: "client", user });
       setState({ status: "success", message: "Cliente autenticado e salvo" });
+      onLogin?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro inesperado";
       setState({ status: "error", message });
@@ -128,6 +133,7 @@ export default function LoginPage() {
       const user = await postUser({ fullName: nameFromEmail, email: staffForm.email });
       saveSession({ role: "staff", user });
       setState({ status: "success", message: "Staff autenticado (simulado) e salvo" });
+      onLogin?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro inesperado";
       setState({ status: "error", message });
@@ -145,6 +151,7 @@ export default function LoginPage() {
       const user = await postUser({ fullName: nameFromEmail, email: staffForm.email });
       saveSession({ role: "admin", user });
       setState({ status: "success", message: "Admin autenticado (simulado) e salvo" });
+      onLogin?.();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Erro inesperado";
       setState({ status: "error", message });
