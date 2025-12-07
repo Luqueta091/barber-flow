@@ -12,8 +12,42 @@ export type ReservationInput = {
 };
 
 export async function lockReservation(input: ReservationInput) {
+  if (input.endAt <= input.startAt) {
+    const err = new Error("slot_conflict");
+    (err as any).status = 409;
+    throw err;
+  }
+
   const token = uuid();
   const expiresAt = new Date(Date.now() + (input.ttlSeconds ?? 300) * 1000);
+
+  const conflict = await pool.query(
+    `
+    SELECT 1
+    FROM reservations
+    WHERE unit_id=$1
+      AND service_id=$2
+      AND status IN ('locked','confirmed')
+      AND expires_at > now()
+      AND ($3,$4) OVERLAPS (start_at, end_at)
+    UNION ALL
+    SELECT 1
+    FROM appointments
+    WHERE unit_id=$1
+      AND service_id=$2
+      AND status <> 'cancelled'
+      AND ($3,$4) OVERLAPS (start_at, end_at)
+    LIMIT 1;
+  `,
+    [input.unitId, input.serviceId, input.startAt.toISOString(), input.endAt.toISOString()],
+  );
+
+  if (conflict.rowCount > 0) {
+    const err = new Error("slot_conflict");
+    (err as any).status = 409;
+    throw err;
+  }
+
   await pool.query(
     `INSERT INTO reservations (token,unit_id,service_id,start_at,end_at,status,expires_at)
      VALUES ($1,$2,$3,$4,$5,'locked',$6)`,

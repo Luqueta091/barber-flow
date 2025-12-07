@@ -104,6 +104,13 @@ export const adminStore = {
     );
     return res.rows;
   },
+  async getService(id: string): Promise<Service | null> {
+    const res = await pool.query(
+      `SELECT id,unit_id as "unitId",name,duration_minutes as "durationMinutes",buffer_after_minutes as "bufferAfterMinutes",capacity,price,image FROM services WHERE id=$1`,
+      [id],
+    );
+    return res.rows[0] ?? null;
+  },
   async createBarber(input: Omit<Barber, "id">): Promise<Barber> {
     const id = uuid();
     await pool.query(`INSERT INTO barbers (id,name,contact,units,is_active) VALUES ($1,$2,$3,$4,$5)`, [
