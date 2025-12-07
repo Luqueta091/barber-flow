@@ -7,7 +7,7 @@ import { requestOtpHandler, verifyOtpHandler } from "./routes/auth.js";
 import { createUserHandler, getUserHandler, updateUserHandler, deleteUserHandler, searchUserHandler } from "./routes/users.js";
 import { initSchema } from "./db.js";
 // inicia o schema assim que o módulo é carregado
-const schemaReady = initSchema().catch((err) => {
+export const schemaReady = initSchema().catch((err) => {
   console.error("Failed to init schema", err);
   throw err;
 });
