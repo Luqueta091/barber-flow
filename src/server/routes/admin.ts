@@ -29,6 +29,7 @@ const barberSchema = z.object({
   contact: z.string().optional(),
   units: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),
+  pin: z.string().optional(),
 });
 
 export async function createUnitHandler(req: Request, res: Response) {

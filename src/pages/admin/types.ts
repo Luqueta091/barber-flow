@@ -24,4 +24,5 @@ export interface Barber {
   contact?: string;
   units?: string[];
   isActive?: boolean;
+  pin?: string;
 }

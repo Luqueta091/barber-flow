@@ -42,9 +42,11 @@ export async function initSchema() {
       name TEXT NOT NULL,
       contact TEXT,
       units TEXT[],
-      is_active BOOLEAN DEFAULT true
+      is_active BOOLEAN DEFAULT true,
+      pin TEXT
     );
   `);
+  await pool.query(`ALTER TABLE barbers ADD COLUMN IF NOT EXISTS pin TEXT;`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS reservations (

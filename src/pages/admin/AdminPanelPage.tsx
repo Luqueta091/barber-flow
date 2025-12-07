@@ -171,6 +171,7 @@ export default function AdminPanelPage() {
       };
       const res = await api.send("/admin/barbers", "POST", payload);
       setBarbers((prev) => [...prev, res]);
+      alert(`PIN do barbeiro ${res.name}: ${res.pin || "geração indisponível"}`);
       setBarberForm({ name: "", contact: "" });
     },
     [api],
@@ -645,6 +646,7 @@ function BarbersSection({
           <div key={b.id} data-barber-id={b.id} className="p-4 border border-slate-200 rounded-xl bg-white">
             <div className="font-bold text-slate-900 text-lg">{b.name}</div>
             {b.contact && <div className="text-slate-500 text-sm">{b.contact}</div>}
+            <div className="text-xs text-slate-500 mt-1">PIN: {b.pin || "—"}</div>
             <div className="text-xs text-slate-500 mt-1">
               Unidades:{" "}
               {b.units?.length && units.length

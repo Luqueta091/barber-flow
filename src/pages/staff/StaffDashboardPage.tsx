@@ -10,6 +10,11 @@ import { Appointment, Block, Slot } from "./types";
 const SESSION_KEY = "barber-flow-session";
 
 export default function StaffDashboardPage() {
+  const session = useMemo(() => {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }, []);
+
   const [unitId, setUnitId] = useState<string>("");
   const [serviceId, setServiceId] = useState<string>("");
   const [barbers, setBarbers] = useState<any[]>([]);
@@ -21,10 +26,6 @@ export default function StaffDashboardPage() {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [notifications, setNotifications] = useState<{ id: string; message: string; type: "success" | "alert" | "info" }[]>([]);
-  const session = useMemo(() => {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as { user?: { id?: string; fullName?: string } }) : null;
-  }, []);
 
   const apiFetch = useCallback(
     async (path: string, options?: RequestInit) => {
@@ -40,47 +41,6 @@ export default function StaffDashboardPage() {
     },
     [env.VITE_API_BASE],
   );
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const [unitsRes, servicesRes, barbersRes] = await Promise.all([
-          apiFetch("/admin/units"),
-          apiFetch("/admin/services"),
-          apiFetch("/admin/barbers"),
-        ]);
-        const unitList = Array.isArray(unitsRes.data) ? unitsRes.data : [];
-        const serviceList = Array.isArray(servicesRes.data) ? servicesRes.data : [];
-        const barberList = Array.isArray(barbersRes.data) ? barbersRes.data : [];
-        setUnits(unitList);
-        setServices(serviceList);
-        setBarbers(barberList);
-        if (unitList[0]) setUnitId(unitList[0].id);
-        if (serviceList[0]) setServiceId(serviceList[0].id);
-        if (barberList[0]) setSelectedBarberId(barberList[0].id);
-
-        await reloadAppointments({
-          unitList,
-          serviceList,
-          barberList,
-          barberId: barberList[0]?.id,
-        });
-      } catch (err) {
-        console.error(err);
-      }
-
-      // Slots iniciais simples (mantém mock enquanto não há endpoint específico)
-      setSlots(
-        Array.from({ length: 8 }).map((_, i) => {
-          const start = new Date();
-          start.setHours(9 + i, 0, 0, 0);
-          const end = new Date(start.getTime() + 30 * 60_000);
-          return { id: `slot-${i}`, start: start.toISOString(), end: end.toISOString(), state: i % 3 === 0 ? "booked" : "free" };
-        }),
-      );
-    })();
-  }, [apiFetch]);
-
   const reloadAppointments = useCallback(
     async (options?: { unitList?: any[]; serviceList?: any[]; barberList?: any[]; barberId?: string }) => {
       const unitList = options?.unitList ?? units;
@@ -122,11 +82,59 @@ export default function StaffDashboardPage() {
   }, []);
 
   useEffect(() => {
+    (async () => {
+      try {
+        const [unitsRes, servicesRes, barbersRes] = await Promise.all([
+          apiFetch("/admin/units"),
+          apiFetch("/admin/services"),
+          apiFetch("/admin/barbers"),
+        ]);
+        const unitList = Array.isArray(unitsRes.data) ? unitsRes.data : [];
+        const serviceList = Array.isArray(servicesRes.data) ? servicesRes.data : [];
+        const barberList = Array.isArray(barbersRes.data) ? barbersRes.data : [];
+        setUnits(unitList);
+        setServices(serviceList);
+        setBarbers(barberList);
+        if (unitList[0]) setUnitId(unitList[0].id);
+        if (serviceList[0]) setServiceId(serviceList[0].id);
+        const sessionBarberId = session?.barber?.id as string | undefined;
+        if (barberList.length) {
+          setSelectedBarberId(sessionBarberId || barberList[0].id);
+        }
+        if (sessionBarberId) {
+          const barberUnits = barberList.find((b: any) => b.id === sessionBarberId)?.units || [];
+          if (barberUnits[0]) setUnitId(barberUnits[0]);
+        } else {
+          if (unitList[0]) setUnitId(unitList[0].id);
+        }
+        await reloadAppointments({
+          unitList,
+          serviceList,
+          barberList,
+          barberId: sessionBarberId || barberList[0]?.id,
+        });
+      } catch (err) {
+        console.error(err);
+      }
+
+      // Slots iniciais simples (mantém mock enquanto não há endpoint específico)
+      setSlots(
+        Array.from({ length: 8 }).map((_, i) => {
+          const start = new Date();
+          start.setHours(9 + i, 0, 0, 0);
+          const end = new Date(start.getTime() + 30 * 60_000);
+          return { id: `slot-${i}`, start: start.toISOString(), end: end.toISOString(), state: i % 3 === 0 ? "booked" : "free" };
+        }),
+      );
+    })();
+  }, [apiFetch, reloadAppointments, session]);
+
+  useEffect(() => {
     if (!selectedBarberId && barbers.length) {
-      setSelectedBarberId(barbers[0].id);
+      setSelectedBarberId(session?.barber?.id || barbers[0].id);
     }
     reloadAppointments().catch((err) => console.error(err));
-  }, [selectedBarberId, reloadAppointments, barbers]);
+  }, [selectedBarberId, reloadAppointments, barbers, session]);
 
   const handleToggleSlot = async (slot: Slot) => {
     try {
@@ -210,9 +218,9 @@ export default function StaffDashboardPage() {
               appointments={appointments}
               onCheckIn={handleCheckIn}
               onMarkNoShow={handleMarkNoShow}
-              barbers={barbers}
+              barbers={session?.barber ? barbers.filter((b) => b.id === selectedBarberId) : barbers}
               selectedBarberId={selectedBarberId}
-              onSelectBarber={setSelectedBarberId}
+              onSelectBarber={session?.barber ? undefined : setSelectedBarberId}
             />
           )}
           {view === "bloqueios" && <BlockManager blocks={blocks} onCreate={handleCreateBlock} onRemove={handleRemoveBlock} />}

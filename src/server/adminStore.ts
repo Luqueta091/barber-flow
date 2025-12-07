@@ -30,7 +30,12 @@ export type Barber = {
   contact?: string;
   units?: string[];
   isActive?: boolean;
+  pin?: string;
 };
+
+function generatePin(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
 export const adminStore = {
   async createUnit(input: Omit<Unit, "id">): Promise<Unit> {
@@ -113,14 +118,16 @@ export const adminStore = {
   },
   async createBarber(input: Omit<Barber, "id">): Promise<Barber> {
     const id = uuid();
-    await pool.query(`INSERT INTO barbers (id,name,contact,units,is_active) VALUES ($1,$2,$3,$4,$5)`, [
+    const pin = generatePin();
+    await pool.query(`INSERT INTO barbers (id,name,contact,units,is_active,pin) VALUES ($1,$2,$3,$4,$5,$6)`, [
       id,
       input.name,
       input.contact ?? null,
       input.units ?? [],
       input.isActive ?? true,
+      pin,
     ]);
-    return { id, ...input, isActive: input.isActive ?? true };
+    return { id, ...input, isActive: input.isActive ?? true, pin };
   },
   async updateBarber(id: string, input: Partial<Omit<Barber, "id">>): Promise<Barber | null> {
     const existing = await this.listBarbers().then((all) => all.find((b) => b.id === id));
@@ -140,8 +147,12 @@ export const adminStore = {
     return res.rowCount > 0;
   },
   async listBarbers(): Promise<Barber[]> {
-    const res = await pool.query(`SELECT id,name,contact,units,is_active as "isActive" FROM barbers`);
+    const res = await pool.query(`SELECT id,name,contact,units,is_active as "isActive",pin FROM barbers`);
     return res.rows;
+  },
+  async findBarberByPin(pin: string): Promise<Barber | null> {
+    const res = await pool.query(`SELECT id,name,contact,units,is_active as "isActive",pin FROM barbers WHERE pin=$1`, [pin]);
+    return res.rows[0] ?? null;
   },
   async clear() {
     await pool.query("TRUNCATE services, barbers, units RESTART IDENTITY");

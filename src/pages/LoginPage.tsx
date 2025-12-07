@@ -14,6 +14,12 @@ type StaffLoginForm = {
   password: string;
 };
 
+type StaffMode = "barber" | "admin";
+
+type BarberLoginForm = {
+  pin: string;
+};
+
 type LoginState =
   | { status: "idle"; message?: string }
   | { status: "loading" }
@@ -84,6 +90,8 @@ export default function LoginPage({ onLogin }: Props) {
   const [activeRole, setActiveRole] = useState<UserRole>(UserRole.CLIENT);
   const [clientForm, setClientForm] = useState<ClientLoginForm>({ name: "", phone: "" });
   const [staffForm, setStaffForm] = useState<StaffLoginForm>({ email: "", password: "" });
+  const [barberForm, setBarberForm] = useState<BarberLoginForm>({ pin: "" });
+  const [staffMode, setStaffMode] = useState<StaffMode>("barber");
   const [state, setState] = useState<LoginState>({ status: "idle" });
 
   const saveSession = (payload: Record<string, unknown>) => {
@@ -123,26 +131,35 @@ export default function LoginPage({ onLogin }: Props) {
 
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!staffForm.email || !staffForm.password) {
-      setState({ status: "error", message: "Informe email e senha" });
+    if (staffMode === "barber") {
+      if (!barberForm.pin) {
+        setState({ status: "error", message: "Informe o PIN do barbeiro" });
+        return;
+      }
+      try {
+        setState({ status: "loading" });
+        const res = await fetch(`${env.VITE_API_BASE}/auth/barber-pin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin: barberForm.pin }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "PIN inválido");
+        }
+        const data = await res.json();
+        saveSession({ role: "staff", barber: data.barber });
+        setState({ status: "success", message: `Bem-vindo, ${data.barber.name}` });
+        onLogin?.();
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Erro inesperado";
+        setState({ status: "error", message });
+      }
       return;
     }
-    try {
-      setState({ status: "loading" });
-      const nameFromEmail = staffForm.email.split("@")[0] || "Staff";
-      const user = await postUser({ fullName: nameFromEmail, email: staffForm.email });
-      saveSession({ role: "staff", user });
-      setState({ status: "success", message: "Staff autenticado (simulado) e salvo" });
-      onLogin?.();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro inesperado";
-      setState({ status: "error", message });
-    }
-  };
 
-  const handleAdminLogin = async () => {
     if (!staffForm.email || !staffForm.password) {
-      setState({ status: "error", message: "Informe email e senha para admin" });
+      setState({ status: "error", message: "Informe email e senha" });
       return;
     }
     try {
@@ -257,46 +274,64 @@ export default function LoginPage({ onLogin }: Props) {
           {/* Login Staff/Admin */}
           {activeRole === UserRole.STAFF && (
             <form onSubmit={handleStaffLogin} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <Input
-                label="Email corporativo"
-                id="staff-email"
-                type="email"
-                placeholder="nome@empresa.com"
-                value={staffForm.email}
-                onChange={(e) => setStaffForm((prev) => ({ ...prev, email: e.target.value }))}
-                required
-              />
+              <div className="flex p-1 bg-slate-100 rounded-lg gap-1">
+                <button
+                  type="button"
+                  className={`flex-1 py-2 text-sm font-semibold rounded-md ${
+                    staffMode === "barber" ? "bg-white shadow text-slate-900" : "text-slate-500"
+                  }`}
+                  onClick={() => setStaffMode("barber")}
+                >
+                  Barbeiro (PIN)
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 py-2 text-sm font-semibold rounded-md ${
+                    staffMode === "admin" ? "bg-white shadow text-slate-900" : "text-slate-500"
+                  }`}
+                  onClick={() => setStaffMode("admin")}
+                >
+                  Admin
+                </button>
+              </div>
 
-              <Input
-                label="Senha"
-                id="staff-password"
-                type="password"
-                placeholder="••••••••"
-                value={staffForm.password}
-                onChange={(e) => setStaffForm((prev) => ({ ...prev, password: e.target.value }))}
-                required
-              />
+              {staffMode === "barber" ? (
+                <Input
+                  label="PIN do Barbeiro"
+                  id="barber-pin"
+                  type="text"
+                  placeholder="6 dígitos"
+                  value={barberForm.pin}
+                  onChange={(e) => setBarberForm({ pin: e.target.value })}
+                  required
+                />
+              ) : (
+                <>
+                  <Input
+                    label="Email corporativo"
+                    id="staff-email"
+                    type="email"
+                    placeholder="nome@empresa.com"
+                    value={staffForm.email}
+                    onChange={(e) => setStaffForm((prev) => ({ ...prev, email: e.target.value }))}
+                    required
+                  />
+
+                  <Input
+                    label="Senha"
+                    id="staff-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={staffForm.password}
+                    onChange={(e) => setStaffForm((prev) => ({ ...prev, password: e.target.value }))}
+                    required
+                  />
+                </>
+              )}
 
               <div className="pt-2 flex flex-col gap-3">
-                <Button type="submit" data-action="login-staff" fullWidth variant="primary" disabled={isLoading}>
-                  {isLoading ? "Entrando..." : "Entrar Staff"}
-                </Button>
-
-                <div className="relative flex py-1 items-center">
-                  <div className="flex-grow border-t border-slate-200" />
-                  <span className="flex-shrink-0 mx-4 text-slate-400 text-xs uppercase">Ou</span>
-                  <div className="flex-grow border-t border-slate-200" />
-                </div>
-
-                <Button
-                  type="button"
-                  onClick={handleAdminLogin}
-                  data-action="login-admin"
-                  fullWidth
-                  variant="outline"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Entrando..." : "Entrar Admin"}
+                <Button type="submit" data-action={staffMode === "barber" ? "login-barber" : "login-admin"} fullWidth variant="primary" disabled={isLoading}>
+                  {isLoading ? "Entrando..." : staffMode === "barber" ? "Entrar como Barbeiro" : "Entrar Admin"}
                 </Button>
               </div>
             </form>

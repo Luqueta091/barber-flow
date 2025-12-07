@@ -3,7 +3,7 @@ import cors from "cors";
 import { lockSlot, releaseSlot } from "./controllers/slots.js";
 import { getAvailability } from "./routes/availability.js";
 import { createAppointmentHandler, listAppointmentsHandler } from "./routes/appointments.js";
-import { requestOtpHandler, verifyOtpHandler } from "./routes/auth.js";
+import { requestOtpHandler, verifyOtpHandler, barberPinLoginHandler } from "./routes/auth.js";
 import { createUserHandler, getUserHandler, updateUserHandler, deleteUserHandler, searchUserHandler } from "./routes/users.js";
 import { initSchema } from "./db.js";
 // inicia o schema assim que o módulo é carregado
@@ -65,6 +65,7 @@ export function createApp() {
   app.get("/appointments", listAppointmentsHandler);
   app.post("/auth/request-otp", requestOtpHandler);
   app.post("/auth/verify-otp", verifyOtpHandler);
+  app.post("/auth/barber-pin", barberPinLoginHandler);
   // Users
   app.post("/users", createUserHandler);
   app.get("/users/:id", getUserHandler);
