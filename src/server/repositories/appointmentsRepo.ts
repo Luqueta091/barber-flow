@@ -8,6 +8,7 @@ export type AppointmentInput = {
   unitId: string;
   serviceId: string;
   barberId?: string;
+  clientName?: string;
   startAt: Date;
   endAt: Date;
   reservationToken?: string;
@@ -16,14 +17,15 @@ export type AppointmentInput = {
 export async function createAppointment(input: AppointmentInput) {
   const id = uuid();
   await pool.query(
-    `INSERT INTO appointments (id,user_id,unit_id,service_id,barber_id,start_at,end_at,status,reservation_token)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,'scheduled',$8)`,
+    `INSERT INTO appointments (id,user_id,unit_id,service_id,barber_id,client_name,start_at,end_at,status,reservation_token)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'scheduled',$9)`,
     [
       id,
       input.userId,
       input.unitId,
       input.serviceId,
       input.barberId ?? null,
+      input.clientName ?? null,
       input.startAt.toISOString(),
       input.endAt.toISOString(),
       input.reservationToken ?? null,
@@ -56,7 +58,7 @@ export async function listAppointments(date?: string, barberId?: string, userId?
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   const res = await pool.query(
     `
-    SELECT id,user_id as "userId",unit_id as "unitId",service_id as "serviceId",barber_id as "barberId",start_at as "startAt",end_at as "endAt",status,reservation_token as "reservationToken"
+    SELECT id,user_id as "userId",unit_id as "unitId",service_id as "serviceId",barber_id as "barberId",client_name as "clientName",start_at as "startAt",end_at as "endAt",status,reservation_token as "reservationToken"
     FROM appointments
     ${where}
     ORDER BY start_at DESC

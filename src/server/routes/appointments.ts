@@ -9,6 +9,7 @@ const createSchema = z.object({
   serviceId: z.string().min(1),
   unitId: z.string().min(1),
   barberId: z.string().optional(),
+  clientName: z.string().optional(),
   startAt: z.coerce.date(),
   endAt: z.coerce.date(),
   reservationToken: z.string().uuid(),

@@ -127,7 +127,15 @@ export function BookingFlowPage() {
         const duration = service.durationMin || 30;
         const startAt = slot.start;
         const endAt = new Date(new Date(slot.start).getTime() + duration * 60_000).toISOString();
-        const body = { userId: session.user.id, unitId: unit.id, serviceId: service.id, barberId: barber?.id, startAt, endAt };
+        const body = {
+          userId: session.user.id,
+          clientName: session.user.fullName || session.user.name,
+          unitId: unit.id,
+          serviceId: service.id,
+          barberId: barber?.id,
+          startAt,
+          endAt,
+        };
         const res = await apiFetch("/bff/book", { method: "POST", body: JSON.stringify(body) });
         const appt: Appointment = {
           id: res.appointmentId || crypto.randomUUID(),

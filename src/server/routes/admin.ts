@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { adminStore } from "../adminStore.js";
 import { availabilityCache } from "../../modules/availability/cache/index.js";
-import { createBlock, deleteBlock } from "../repositories/blocksRepo.js";
+import { createBlock, deleteBlock, listBlocks } from "../repositories/blocksRepo.js";
 
 const unitSchema = z.object({
   name: z.string().min(1),
@@ -144,6 +144,15 @@ export async function deleteBlockHandler(req: Request, res: Response) {
   const ok = await deleteBlock(req.params.id);
   if (!ok) return res.status(404).json({ error: "not_found" });
   return res.status(204).send();
+}
+
+export async function listBlocksHandler(req: Request, res: Response) {
+  const unitId = req.query.unitId as string | undefined;
+  const dateStr = req.query.date as string | undefined;
+  if (!unitId || !dateStr) return res.status(400).json({ error: "invalid_query" });
+  const date = new Date(dateStr);
+  const data = await listBlocks(unitId, date);
+  return res.json({ data });
 }
 
 export async function listBarbersHandler(_req: Request, res: Response) {

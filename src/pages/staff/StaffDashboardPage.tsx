@@ -6,7 +6,6 @@ import { Notifications } from "./components/Notifications";
 import { Sidebar } from "./components/Sidebar";
 import { SlotAvailability } from "./components/SlotAvailability";
 import { Appointment, Block, Slot } from "./types";
-import { sub } from "date-fns";
 
 const SESSION_KEY = "barber-flow-session";
 
@@ -15,6 +14,7 @@ export default function StaffDashboardPage() {
     const raw = localStorage.getItem(SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   }, []);
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
 
   const [unitId, setUnitId] = useState<string>("");
   const [serviceId, setServiceId] = useState<string>("");
@@ -49,8 +49,7 @@ export default function StaffDashboardPage() {
       const barberList = options?.barberList ?? barbers;
       const barberId = options?.barberId ?? selectedBarberId;
 
-      const today = new Date().toISOString().slice(0, 10);
-      const query = barberId ? `/appointments?date=${today}&barberId=${barberId}` : `/appointments?date=${today}`;
+      const query = barberId ? `/appointments?date=${selectedDate}&barberId=${barberId}` : `/appointments?date=${selectedDate}`;
       const res = await apiFetch(query);
       const appointmentsData: Appointment[] = (res.data ?? []).map((a: any) => {
         const unitInfo = unitList.find((u: any) => u.id === a.unitId);
@@ -58,7 +57,7 @@ export default function StaffDashboardPage() {
         const barberInfo = barberList.find((b: any) => b.id === a.barberId);
         return {
           id: a.id,
-          clientName: a.userId || "Cliente",
+          clientName: a.clientName || a.userId || "Cliente",
           serviceName: serviceInfo?.name || a.serviceId,
           unitName: unitInfo?.name,
           unitAddress: unitInfo?.address,
@@ -69,14 +68,24 @@ export default function StaffDashboardPage() {
       });
       setAppointments(appointmentsData);
     },
-    [apiFetch, barbers, selectedBarberId, services, units],
+    [apiFetch, barbers, selectedBarberId, services, units, selectedDate],
   );
+
+  const reloadBlocks = useCallback(async () => {
+    try {
+      if (!unitId) return;
+      const res = await apiFetch(`/admin/blocks?unitId=${unitId}&date=${selectedDate}`);
+      const data: Block[] = (res.data ?? []).map((b: any) => ({ ...b, start: b.startAt ?? b.start, end: b.endAt ?? b.end }));
+      setBlocks(data);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [apiFetch, unitId, selectedDate]);
 
   const reloadSlots = useCallback(async () => {
     try {
       if (!unitId || !serviceId) return;
-      const today = new Date().toISOString().slice(0, 10);
-      const res = await apiFetch(`/units/${unitId}/availability?serviceId=${serviceId}&startDate=${today}&endDate=${today}`);
+      const res = await apiFetch(`/units/${unitId}/availability?serviceId=${serviceId}&startDate=${selectedDate}&endDate=${selectedDate}`);
       const apiSlots: Slot[] =
         res.data?.[0]?.slots?.map((s: any, idx: number) => ({
           id: `${idx}-${s.start}`,
@@ -95,7 +104,7 @@ export default function StaffDashboardPage() {
     } catch (err) {
       console.error(err);
     }
-  }, [apiFetch, unitId, serviceId]);
+  }, [apiFetch, unitId, serviceId, selectedDate]);
 
   useEffect(() => {
     (async () => {
@@ -129,12 +138,11 @@ export default function StaffDashboardPage() {
           barberList,
           barberId: sessionBarberId || barberList[0]?.id,
         });
+        await reloadBlocks();
+        await reloadSlots();
       } catch (err) {
         console.error(err);
       }
-
-      // Slots iniciais simples (mantém mock enquanto não há endpoint específico)
-      await reloadSlots();
     })();
   }, [apiFetch, reloadAppointments, reloadSlots, session]);
 
@@ -234,8 +242,38 @@ export default function StaffDashboardPage() {
               onSelectBarber={session?.barber ? undefined : setSelectedBarberId}
             />
           )}
-          {view === "bloqueios" && <BlockManager blocks={blocks} onCreate={handleCreateBlock} onRemove={handleRemoveBlock} />}
-          {view === "slots" && <SlotAvailability slots={slots} onToggle={handleToggleSlot} />}
+          {view === "bloqueios" && (
+            <BlockManager
+              blocks={blocks}
+              selectedDate={selectedDate}
+              onDateChange={(v) => {
+                setSelectedDate(v);
+                reloadBlocks();
+                reloadSlots();
+                reloadAppointments();
+              }}
+              onCreate={handleCreateBlock}
+              onRemove={handleRemoveBlock}
+            />
+          )}
+          {view === "slots" && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <label className="text-sm text-slate-600">Data</label>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    reloadSlots();
+                    reloadAppointments();
+                  }}
+                  className="p-2 rounded-lg border border-slate-200"
+                />
+              </div>
+              <SlotAvailability slots={slots} onToggle={handleToggleSlot} />
+            </div>
+          )}
           {view === "notificacoes" && <Notifications items={notifications} />}
         </div>
       </div>

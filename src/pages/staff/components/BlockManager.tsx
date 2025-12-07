@@ -3,11 +3,13 @@ import { Block } from "../types";
 
 interface Props {
   blocks: Block[];
+  selectedDate: string;
+  onDateChange: (value: string) => void;
   onCreate: (block: Omit<Block, "id">) => void;
   onRemove: (id: string) => void;
 }
 
-export function BlockManager({ blocks, onCreate, onRemove }: Props) {
+export function BlockManager({ blocks, selectedDate, onDateChange, onCreate, onRemove }: Props) {
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [reason, setReason] = useState("Almoço");
@@ -28,6 +30,17 @@ export function BlockManager({ blocks, onCreate, onRemove }: Props) {
           setEnd("");
         }}
       >
+        <div>
+          <label className="text-sm font-medium text-slate-700">Data</label>
+          <input
+            id="block-date"
+            type="date"
+            className="w-full p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+            value={selectedDate}
+            onChange={(e) => onDateChange(e.target.value)}
+            required
+          />
+        </div>
         <div>
           <label className="text-sm font-medium text-slate-700">Início</label>
           <input

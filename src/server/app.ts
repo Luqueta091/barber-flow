@@ -24,6 +24,9 @@ import {
   updateBarberHandler,
   deleteBarberHandler,
   listBarbersHandler,
+  createBlockHandler,
+  deleteBlockHandler,
+  listBlocksHandler,
 } from "./routes/admin.js";
 import { subscribePushHandler, listPushHandler } from "./routes/push.js";
 import { bffAvailabilityHandler, bffBookHandler } from "./routes/bff.js";
@@ -88,6 +91,7 @@ export function createApp() {
   app.delete("/admin/barbers/:id", deleteBarberHandler);
   app.post("/admin/blocks", createBlockHandler);
   app.delete("/admin/blocks/:id", deleteBlockHandler);
+  app.get("/admin/blocks", listBlocksHandler);
   // Push subscriptions
   app.post("/push/subscribe", subscribePushHandler);
   app.get("/push/subscriptions", listPushHandler);
