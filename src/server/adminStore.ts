@@ -5,6 +5,10 @@ export type Unit = {
   name: string;
   timezone: string;
   address?: string;
+  openTime?: string;
+  closeTime?: string;
+  capacity?: number;
+  isActive?: boolean;
 };
 
 export type Service = {
@@ -21,7 +25,7 @@ const services = new Map<string, Service>();
 
 export const adminStore = {
   createUnit(input: { name: string; timezone: string; address?: string }): Unit {
-    const u: Unit = { id: uuid(), ...input };
+    const u: Unit = { id: uuid(), isActive: true, ...input };
     units.set(u.id, u);
     return u;
   },

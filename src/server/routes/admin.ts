@@ -7,6 +7,10 @@ const unitSchema = z.object({
   name: z.string().min(1),
   timezone: z.string().min(1),
   address: z.string().optional(),
+  openTime: z.string().optional(),
+  closeTime: z.string().optional(),
+  capacity: z.number().int().positive().optional(),
+  isActive: z.boolean().optional(),
 });
 
 const serviceSchema = z.object({
