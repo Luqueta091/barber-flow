@@ -68,7 +68,7 @@ export function BookingFlowPage() {
           (servicesRes.data ?? []).map((s: any) => ({
             id: s.id,
             name: s.name,
-            price: s.price ?? 0,
+            price: Number(s.price ?? 0),
             durationMin: s.durationMinutes ?? 30,
             description: s.description,
             unitId: s.unitId,
