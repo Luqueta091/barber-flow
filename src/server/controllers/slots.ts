@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { availabilityCache } from "../../modules/availability/cache/index.js";
 import { lockReservation, releaseReservation } from "../repositories/reservationsRepo.js";
+import { sseBus } from "../events/bus.js";
 
 const lockSchema = z.object({
   unitId: z.string().min(1),
@@ -23,6 +24,7 @@ export async function lockSlot(req: Request, res: Response) {
     // Invalida cache de disponibilidade para o dia do slot
     const dateKey = startAt.toISOString().slice(0, 10);
     await availabilityCache.invalidate({ unitId, serviceId, date: dateKey });
+    sseBus.publish("slot_locked", { unitId, serviceId, startAt, endAt });
     return res.status(200).json({
       reservationToken: reservation.token,
       status: reservation.status,
@@ -49,5 +51,7 @@ export async function releaseSlot(req: Request, res: Response) {
 
   const { token } = parsed.data;
   await releaseReservation(token);
+  const dateKey = new Date().toISOString().slice(0, 10);
+  sseBus.publish("slot_unlocked", { token, date: dateKey });
   return res.status(200).json({ status: "released" });
 }

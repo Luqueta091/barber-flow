@@ -3,6 +3,7 @@ import { z } from "zod";
 import { adminStore } from "../adminStore.js";
 import { availabilityCache } from "../../modules/availability/cache/index.js";
 import { createBlock, deleteBlock, listBlocks } from "../repositories/blocksRepo.js";
+import { sseBus } from "../events/bus.js";
 
 const unitSchema = z.object({
   name: z.string().min(1),
@@ -137,12 +138,14 @@ export async function createBlockHandler(req: Request, res: Response) {
   if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
   const block = await createBlock({ ...parsed.data });
   await availabilityCache.invalidateUnit(parsed.data.unitId);
+  sseBus.publish("block_created", block);
   return res.status(201).json(block);
 }
 
 export async function deleteBlockHandler(req: Request, res: Response) {
   const ok = await deleteBlock(req.params.id);
   if (!ok) return res.status(404).json({ error: "not_found" });
+  sseBus.publish("block_deleted", { id: req.params.id });
   return res.status(204).send();
 }
 

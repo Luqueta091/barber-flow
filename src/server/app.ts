@@ -31,6 +31,7 @@ import {
 import { subscribePushHandler, listPushHandler } from "./routes/push.js";
 import { bffAvailabilityHandler, bffBookHandler } from "./routes/bff.js";
 import { metricsHandler } from "./metrics.js";
+import { sseHandler } from "./routes/events.js";
 
 export function createApp() {
   const app = express();
@@ -99,6 +100,7 @@ export function createApp() {
   app.get("/bff/availability", bffAvailabilityHandler);
   app.post("/bff/book", bffBookHandler);
   app.get("/metrics", metricsHandler);
+  app.get("/events", sseHandler);
 
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
 

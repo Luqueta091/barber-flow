@@ -8,6 +8,7 @@ import type { EventEnvelope } from "../../../events/publisher.js";
 import { v4 as uuid } from "uuid";
 import { adminStore } from "../adminStore.js";
 import { eventPublisher } from "../store.js";
+import { sseBus } from "../events/bus.js";
 
 const availabilitySchema = z.object({
   unitId: z.string(),
@@ -81,6 +82,7 @@ export async function bffBookHandler(req: Request, res: Response) {
     await eventPublisher.publish(event);
 
     await availabilityCache.invalidate({ unitId, serviceId, date: startAt.toISOString().slice(0, 10) });
+    sseBus.publish("appointment_created", { unitId, serviceId, barberId, startAt, endAt, status: "scheduled" });
 
     return res.status(201).json({ appointmentId: appointment.id, reservationToken: reservation.token });
   } catch (e: unknown) {
