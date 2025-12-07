@@ -68,7 +68,21 @@ export default function AdminPanelPage() {
       }
       try {
         const barbersRes = await api.get("/admin/barbers");
-        setBarbers(barbersRes.data?.length ? barbersRes.data : mockBarbers);
+        if (barbersRes.data?.length) {
+          setBarbers(barbersRes.data);
+        } else {
+          // Seed barbeiros mock no backend para evitar 404 em editar/remover
+          const seeded: Barber[] = [];
+          for (const b of mockBarbers) {
+            try {
+              const created = await api.send("/admin/barbers", "POST", b);
+              seeded.push(created);
+            } catch (err) {
+              console.error("Erro ao semear barbeiro", err);
+            }
+          }
+          setBarbers(seeded.length ? seeded : mockBarbers);
+        }
       } catch (e) {
         console.error(e);
         setBarbers(mockBarbers);
@@ -429,45 +443,60 @@ function ServicesSection({
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
-        <input
-          className="p-3 rounded-xl border border-slate-200"
-          placeholder="Nome"
-          value={form.name || ""}
-          onChange={(e) => onFormChange({ ...form, name: e.target.value })}
-        />
-        <input
-          className="p-3 rounded-xl border border-slate-200"
-          placeholder="Preço"
-          type="number"
-          value={form.price ?? ""}
-          onChange={(e) => onFormChange({ ...form, price: Number(e.target.value) })}
-        />
-        <input
-          className="p-3 rounded-xl border border-slate-200"
-          placeholder="Duração (min)"
-          type="number"
-          value={form.durationMinutes ?? ""}
-          onChange={(e) => onFormChange({ ...form, durationMinutes: Number(e.target.value) })}
-        />
-        <input
-          className="p-3 rounded-xl border border-slate-200"
-          placeholder="Capacidade"
-          type="number"
-          value={form.capacity ?? ""}
-          onChange={(e) => onFormChange({ ...form, capacity: Number(e.target.value) })}
-        />
-        <select
-          className="p-3 rounded-xl border border-slate-200"
-          value={form.unitId || ""}
-          onChange={(e) => onFormChange({ ...form, unitId: e.target.value })}
-        >
-          <option value="">Unidade</option>
-          {units.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-slate-600">Nome</label>
+          <input
+            className="p-3 rounded-xl border border-slate-200"
+            placeholder="Ex.: Corte clássico"
+            value={form.name || ""}
+            onChange={(e) => onFormChange({ ...form, name: e.target.value })}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-slate-600">Preço (R$)</label>
+          <input
+            className="p-3 rounded-xl border border-slate-200"
+            placeholder="Ex.: 60"
+            type="number"
+            value={form.price ?? ""}
+            onChange={(e) => onFormChange({ ...form, price: Number(e.target.value) })}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-slate-600">Duração (min)</label>
+          <input
+            className="p-3 rounded-xl border border-slate-200"
+            placeholder="Ex.: 30"
+            type="number"
+            value={form.durationMinutes ?? ""}
+            onChange={(e) => onFormChange({ ...form, durationMinutes: Number(e.target.value) })}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-slate-600">Capacidade/h</label>
+          <input
+            className="p-3 rounded-xl border border-slate-200"
+            placeholder="Ex.: 1"
+            type="number"
+            value={form.capacity ?? ""}
+            onChange={(e) => onFormChange({ ...form, capacity: Number(e.target.value) })}
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-semibold text-slate-600">Unidade</label>
+          <select
+            className="p-3 rounded-xl border border-slate-200"
+            value={form.unitId || ""}
+            onChange={(e) => onFormChange({ ...form, unitId: e.target.value })}
+          >
+            <option value="">Selecione</option>
+            {units.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
