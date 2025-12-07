@@ -55,7 +55,7 @@ export function deleteUnitHandler(req: Request, res: Response) {
 }
 
 export function listUnitsHandler(_req: Request, res: Response) {
-  return res.json({ data: adminStore.listUnits() });
+  return res.json({ data: adminStore.listUnits() || [] });
 }
 
 export function createServiceHandler(req: Request, res: Response) {
@@ -86,7 +86,7 @@ export function deleteServiceHandler(req: Request, res: Response) {
 
 export function listServicesHandler(req: Request, res: Response) {
   const unitId = req.query.unitId as string | undefined;
-  return res.json({ data: adminStore.listServices(unitId) });
+  return res.json({ data: adminStore.listServices(unitId) || [] });
 }
 
 export function createBarberHandler(req: Request, res: Response) {
@@ -111,5 +111,5 @@ export function deleteBarberHandler(req: Request, res: Response) {
 }
 
 export function listBarbersHandler(_req: Request, res: Response) {
-  return res.json({ data: adminStore.listBarbers() });
+  return res.json({ data: adminStore.listBarbers() || [] });
 }
