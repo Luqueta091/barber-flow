@@ -10,6 +10,8 @@ import { Appointment, Block, Slot } from "./types";
 const SESSION_KEY = "barber-flow-session";
 
 export default function StaffDashboardPage() {
+  const unitId = "u1";
+  const serviceId = "s1";
   const [view, setView] = useState<"agenda" | "bloqueios" | "slots" | "notificacoes">("agenda");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -66,22 +68,24 @@ export default function StaffDashboardPage() {
     try {
       if (slot.state === "free") {
         // Bloquear
-        await apiFetch("/slots/lock", {
+        const res = await apiFetch("/slots/lock", {
           method: "POST",
           body: JSON.stringify({
-            unitId: "u1",
-            serviceId: "s1",
-            start: slot.start,
-            end: slot.end,
+            unitId,
+            serviceId,
+            startAt: slot.start,
+            endAt: slot.end,
           }),
         });
-        setSlots((prev) => prev.map((s) => (s.id === slot.id ? { ...s, state: "blocked" } : s)));
+        setSlots((prev) => prev.map((s) => (s.id === slot.id ? { ...s, state: "blocked", reservationToken: res.reservationToken } : s)));
       } else if (slot.state === "blocked") {
-        await apiFetch("/slots/release", {
-          method: "POST",
-          body: JSON.stringify({ reservationToken: slot.id }),
-        });
-        setSlots((prev) => prev.map((s) => (s.id === slot.id ? { ...s, state: "free" } : s)));
+        if (slot.reservationToken) {
+          await apiFetch("/slots/release", {
+            method: "POST",
+            body: JSON.stringify({ token: slot.reservationToken }),
+          });
+        }
+        setSlots((prev) => prev.map((s) => (s.id === slot.id ? { ...s, state: "free", reservationToken: undefined } : s)));
       }
     } catch (err) {
       console.error(err);

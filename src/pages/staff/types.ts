@@ -18,4 +18,5 @@ export interface Slot {
   start: string;
   end: string;
   state: "free" | "blocked" | "booked";
+  reservationToken?: string;
 }
