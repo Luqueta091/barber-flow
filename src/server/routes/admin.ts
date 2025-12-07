@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { adminStore } from "../adminStore.js";
 import { availabilityCache } from "../../modules/availability/cache/index.js";
+import { createBlock, deleteBlock } from "../repositories/blocksRepo.js";
 
 const unitSchema = z.object({
   name: z.string().min(1),
@@ -119,6 +120,28 @@ export async function updateBarberHandler(req: Request, res: Response) {
 
 export async function deleteBarberHandler(req: Request, res: Response) {
   const ok = await adminStore.deleteBarber(req.params.id);
+  if (!ok) return res.status(404).json({ error: "not_found" });
+  return res.status(204).send();
+}
+
+// Blocks (unidade)
+const blockSchema = z.object({
+  unitId: z.string().min(1),
+  startAt: z.coerce.date(),
+  endAt: z.coerce.date(),
+  reason: z.string().optional(),
+});
+
+export async function createBlockHandler(req: Request, res: Response) {
+  const parsed = blockSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
+  const block = await createBlock({ ...parsed.data });
+  await availabilityCache.invalidateUnit(parsed.data.unitId);
+  return res.status(201).json(block);
+}
+
+export async function deleteBlockHandler(req: Request, res: Response) {
+  const ok = await deleteBlock(req.params.id);
   if (!ok) return res.status(404).json({ error: "not_found" });
   return res.status(204).send();
 }

@@ -23,6 +23,7 @@ export function SlotAvailability({ slots, onToggle }: Props) {
             data-slot-state={slot.state}
             onClick={() => onToggle(slot)}
             className={`py-3 px-3 rounded-xl text-sm font-semibold border transition-all ${stateColors[slot.state]}`}
+            title={slot.state === "blocked" ? "Horário bloqueado" : slot.state === "booked" ? "Agendado" : "Disponível"}
           >
             {new Date(slot.start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
           </button>

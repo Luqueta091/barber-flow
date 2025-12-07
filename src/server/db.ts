@@ -49,6 +49,17 @@ export async function initSchema() {
   await pool.query(`ALTER TABLE barbers ADD COLUMN IF NOT EXISTS pin TEXT;`);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS blocks (
+      id UUID PRIMARY KEY,
+      unit_id UUID NOT NULL,
+      start_at TIMESTAMPTZ NOT NULL,
+      end_at TIMESTAMPTZ NOT NULL,
+      reason TEXT,
+      created_at TIMESTAMPTZ DEFAULT now()
+    );
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS reservations (
       token UUID PRIMARY KEY,
       unit_id UUID NOT NULL,
@@ -76,6 +87,7 @@ export async function initSchema() {
     );
   `);
 
-  // Garante coluna de barbeiro em deploys já existentes
+  // Garante colunas em deploys já existentes
   await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS barber_id UUID;`);
+  await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS client_name TEXT;`);
 }

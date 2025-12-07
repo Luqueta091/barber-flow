@@ -6,6 +6,7 @@ import { Notifications } from "./components/Notifications";
 import { Sidebar } from "./components/Sidebar";
 import { SlotAvailability } from "./components/SlotAvailability";
 import { Appointment, Block, Slot } from "./types";
+import { sub } from "date-fns";
 
 const SESSION_KEY = "barber-flow-session";
 
@@ -83,7 +84,14 @@ export default function StaffDashboardPage() {
           end: s.end,
           state: "free",
         })) ?? [];
-      setSlots(apiSlots);
+      setSlots((prev) => {
+        const mapped = apiSlots.map((slot) => {
+          const existing = prev.find((p) => p.start === slot.start && p.end === slot.end);
+          if (existing) return { ...slot, state: existing.state, reservationToken: existing.reservationToken };
+          return slot;
+        });
+        return mapped;
+      });
     } catch (err) {
       console.error(err);
     }

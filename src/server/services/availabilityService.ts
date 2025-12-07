@@ -1,6 +1,7 @@
 import { generateSlots } from "../../modules/availability/domain/slotGenerator.js";
 import { adminStore } from "../adminStore.js";
 import { pool } from "../db.js";
+import { listBlocks } from "../repositories/blocksRepo.js";
 
 type ComputeParams = {
   unitId: string;
@@ -93,6 +94,7 @@ export async function computeAvailabilityForDate(params: ComputeParams): Promise
   if (end <= start) return { dateKey, slots: [] };
 
   const { appointments, reservations } = await loadConflicts(unitId, serviceId, start, end);
+  const blocks = await listBlocks(unitId, day);
 
   const slots = generateSlots({
     date: day,
@@ -102,7 +104,7 @@ export async function computeAvailabilityForDate(params: ComputeParams): Promise
       bufferAfterMinutes: service.bufferAfterMinutes ?? 0,
       capacity: service.capacity ?? 1,
     },
-    existingAppointments: appointments,
+    existingAppointments: [...appointments, ...blocks.map((b) => ({ start: b.startAt, end: b.endAt }))],
     existingReservations: reservations,
   }).map((s) => ({ start: s.start.toISOString(), end: s.end.toISOString() }));
 
