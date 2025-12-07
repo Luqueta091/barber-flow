@@ -27,6 +27,7 @@ export function BookingFlowPage() {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [toast, setToast] = useState<{ message: string; kind?: "success" | "error" } | null>(null);
   const session = useMemo(() => {
     const raw = localStorage.getItem(SESSION_KEY);
     return raw ? (JSON.parse(raw) as { user?: { id?: string; fullName?: string } }) : null;
@@ -123,14 +124,20 @@ export function BookingFlowPage() {
         };
         setAppointments((prev) => [appt, ...prev]);
         setView("appointments");
-        alert("Agendamento criado com sucesso!");
+        setToast({ message: "Agendamento criado com sucesso!", kind: "success" });
       } catch (err) {
         console.error(err);
-        alert("Não foi possível criar o agendamento (conflito ou erro de rede).");
+        setToast({ message: "Não foi possível criar o agendamento (conflito ou erro de rede).", kind: "error" });
       }
     },
     [apiFetch, session],
   );
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(id);
+  }, [toast]);
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
@@ -155,6 +162,17 @@ export function BookingFlowPage() {
           {view === "metrics" && <MetricsView appointments={appointments} />}
         </div>
       </div>
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div
+            className={`rounded-2xl shadow-xl px-4 py-3 text-sm font-semibold text-white transition-all ${
+              toast.kind === "error" ? "bg-rose-500" : "bg-emerald-600"
+            }`}
+          >
+            {toast.message}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
