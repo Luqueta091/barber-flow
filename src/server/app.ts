@@ -6,6 +6,11 @@ import { createAppointmentHandler, listAppointmentsHandler } from "./routes/appo
 import { requestOtpHandler, verifyOtpHandler } from "./routes/auth.js";
 import { createUserHandler, getUserHandler, updateUserHandler, deleteUserHandler, searchUserHandler } from "./routes/users.js";
 import { initSchema } from "./db.js";
+// inicia o schema assim que o módulo é carregado
+const schemaReady = initSchema().catch((err) => {
+  console.error("Failed to init schema", err);
+  throw err;
+});
 import {
   createUnitHandler,
   updateUnitHandler,
@@ -94,7 +99,7 @@ export function createApp() {
 
 // Allow running standalone: node dist/server/app.js
 if (process.env.START_SERVER === "true") {
-  initSchema()
+  schemaReady
     .then(() => {
       const app = createApp();
       const port = process.env.PORT ?? 3001;
