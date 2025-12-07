@@ -4,6 +4,7 @@ export interface Appointment {
   serviceName: string;
   unitName?: string;
   unitAddress?: string;
+  barberId?: string;
   startAt: string;
   status: "scheduled" | "completed" | "cancelled" | "no_show";
 }

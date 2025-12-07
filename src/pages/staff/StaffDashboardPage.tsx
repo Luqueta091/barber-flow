@@ -12,6 +12,8 @@ const SESSION_KEY = "barber-flow-session";
 export default function StaffDashboardPage() {
   const [unitId, setUnitId] = useState<string>("");
   const [serviceId, setServiceId] = useState<string>("");
+  const [barbers, setBarbers] = useState<any[]>([]);
+  const [selectedBarberId, setSelectedBarberId] = useState<string>("");
   const [units, setUnits] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
   const [view, setView] = useState<"agenda" | "bloqueios" | "slots" | "notificacoes">("agenda");
@@ -42,30 +44,27 @@ export default function StaffDashboardPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [unitsRes, servicesRes] = await Promise.all([apiFetch("/admin/units"), apiFetch("/admin/services")]);
+        const [unitsRes, servicesRes, barbersRes] = await Promise.all([
+          apiFetch("/admin/units"),
+          apiFetch("/admin/services"),
+          apiFetch("/admin/barbers"),
+        ]);
         const unitList = Array.isArray(unitsRes.data) ? unitsRes.data : [];
         const serviceList = Array.isArray(servicesRes.data) ? servicesRes.data : [];
+        const barberList = Array.isArray(barbersRes.data) ? barbersRes.data : [];
         setUnits(unitList);
         setServices(serviceList);
+        setBarbers(barberList);
         if (unitList[0]) setUnitId(unitList[0].id);
         if (serviceList[0]) setServiceId(serviceList[0].id);
+        if (barberList[0]) setSelectedBarberId(barberList[0].id);
 
-        const today = new Date().toISOString().slice(0, 10);
-        const res = await apiFetch(`/appointments?date=${today}`);
-        const appointmentsData: Appointment[] = (res.data ?? []).map((a: any) => {
-          const unitInfo = unitList.find((u: any) => u.id === a.unitId);
-          const serviceInfo = serviceList.find((s: any) => s.id === a.serviceId);
-          return {
-            id: a.id,
-            clientName: a.userId || "Cliente",
-            serviceName: serviceInfo?.name || a.serviceId,
-            unitName: unitInfo?.name,
-            unitAddress: unitInfo?.address,
-            startAt: a.startAt,
-            status: a.status || "scheduled",
-          };
+        await reloadAppointments({
+          unitList,
+          serviceList,
+          barberList,
+          barberId: barberList[0]?.id,
         });
-        setAppointments(appointmentsData);
       } catch (err) {
         console.error(err);
       }
@@ -82,6 +81,36 @@ export default function StaffDashboardPage() {
     })();
   }, [apiFetch]);
 
+  const reloadAppointments = useCallback(
+    async (options?: { unitList?: any[]; serviceList?: any[]; barberList?: any[]; barberId?: string }) => {
+      const unitList = options?.unitList ?? units;
+      const serviceList = options?.serviceList ?? services;
+      const barberList = options?.barberList ?? barbers;
+      const barberId = options?.barberId ?? selectedBarberId;
+
+      const today = new Date().toISOString().slice(0, 10);
+      const query = barberId ? `/appointments?date=${today}&barberId=${barberId}` : `/appointments?date=${today}`;
+      const res = await apiFetch(query);
+      const appointmentsData: Appointment[] = (res.data ?? []).map((a: any) => {
+        const unitInfo = unitList.find((u: any) => u.id === a.unitId);
+        const serviceInfo = serviceList.find((s: any) => s.id === a.serviceId);
+        const barberInfo = barberList.find((b: any) => b.id === a.barberId);
+        return {
+          id: a.id,
+          clientName: a.userId || "Cliente",
+          serviceName: serviceInfo?.name || a.serviceId,
+          unitName: unitInfo?.name,
+          unitAddress: unitInfo?.address,
+          startAt: a.startAt,
+          status: a.status || "scheduled",
+          barberId: barberInfo?.id,
+        };
+      });
+      setAppointments(appointmentsData);
+    },
+    [apiFetch, barbers, selectedBarberId, services, units],
+  );
+
   const reloadSlots = useCallback(async () => {
     try {
       // Aqui poderia chamar GET /units/{id}/availability?serviceId=...&startDate=...&endDate=...
@@ -91,6 +120,13 @@ export default function StaffDashboardPage() {
       console.error(err);
     }
   }, []);
+
+  useEffect(() => {
+    if (!selectedBarberId && barbers.length) {
+      setSelectedBarberId(barbers[0].id);
+    }
+    reloadAppointments().catch((err) => console.error(err));
+  }, [selectedBarberId, reloadAppointments, barbers]);
 
   const handleToggleSlot = async (slot: Slot) => {
     try {
@@ -169,7 +205,16 @@ export default function StaffDashboardPage() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-[240px,1fr] gap-6">
         <Sidebar current={view} onChange={setView} />
         <div className="space-y-6">
-          {view === "agenda" && <Agenda appointments={appointments} onCheckIn={handleCheckIn} onMarkNoShow={handleMarkNoShow} />}
+          {view === "agenda" && (
+            <Agenda
+              appointments={appointments}
+              onCheckIn={handleCheckIn}
+              onMarkNoShow={handleMarkNoShow}
+              barbers={barbers}
+              selectedBarberId={selectedBarberId}
+              onSelectBarber={setSelectedBarberId}
+            />
+          )}
           {view === "bloqueios" && <BlockManager blocks={blocks} onCreate={handleCreateBlock} onRemove={handleRemoveBlock} />}
           {view === "slots" && <SlotAvailability slots={slots} onToggle={handleToggleSlot} />}
           {view === "notificacoes" && <Notifications items={notifications} />}

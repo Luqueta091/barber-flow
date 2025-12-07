@@ -65,6 +65,7 @@ export async function initSchema() {
       user_id UUID NOT NULL,
       unit_id UUID NOT NULL,
       service_id UUID NOT NULL,
+      barber_id UUID,
       start_at TIMESTAMPTZ NOT NULL,
       end_at TIMESTAMPTZ NOT NULL,
       status TEXT NOT NULL DEFAULT 'scheduled',
@@ -72,4 +73,7 @@ export async function initSchema() {
       created_at TIMESTAMPTZ DEFAULT now()
     );
   `);
+
+  // Garante coluna de barbeiro em deploys já existentes
+  await pool.query(`ALTER TABLE appointments ADD COLUMN IF NOT EXISTS barber_id UUID;`);
 }

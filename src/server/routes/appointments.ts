@@ -8,6 +8,7 @@ const createSchema = z.object({
   userId: z.string().min(1),
   serviceId: z.string().min(1),
   unitId: z.string().min(1),
+  barberId: z.string().optional(),
   startAt: z.coerce.date(),
   endAt: z.coerce.date(),
   reservationToken: z.string().uuid(),
@@ -35,8 +36,9 @@ export async function createAppointmentHandler(req: Request, res: Response) {
 
 export async function listAppointmentsHandler(req: Request, res: Response) {
   const date = (req.query.date as string | undefined) || undefined;
+  const barberId = (req.query.barberId as string | undefined) || undefined;
   try {
-    const data = await listAppointments(date);
+    const data = await listAppointments(date, barberId);
     return res.json({ data });
   } catch (err) {
     console.error(err);

@@ -6,14 +6,35 @@ interface Props {
   appointments: Appointment[];
   onMarkNoShow: (id: string) => void;
   onCheckIn: (id: string) => void;
+  barbers?: { id: string; name: string }[];
+  selectedBarberId?: string;
+  onSelectBarber?: (id: string) => void;
 }
 
-export function Agenda({ appointments, onMarkNoShow, onCheckIn }: Props) {
+export function Agenda({ appointments, onMarkNoShow, onCheckIn, barbers = [], selectedBarberId, onSelectBarber }: Props) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold text-slate-900">Agenda do dia</h3>
-        <div className="text-sm text-slate-500">Total: {appointments.length}</div>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h3 className="text-xl font-bold text-slate-900">Agenda do dia</h3>
+          <div className="text-sm text-slate-500">Total: {appointments.length}</div>
+        </div>
+        {barbers.length > 0 && onSelectBarber && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-500">Barbeiro</span>
+            <select
+              className="p-2 rounded-lg border border-slate-200 text-sm"
+              value={selectedBarberId || ""}
+              onChange={(e) => onSelectBarber(e.target.value)}
+            >
+              {barbers.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       <div className="space-y-3">
         {appointments.map((appt) => (

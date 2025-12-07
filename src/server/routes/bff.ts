@@ -36,6 +36,7 @@ const bookSchema = z.object({
   userId: z.string(),
   unitId: z.string(),
   serviceId: z.string(),
+  barberId: z.string().optional(),
   startAt: z.coerce.date(),
   endAt: z.coerce.date(),
 });
@@ -44,6 +45,7 @@ export async function bffBookHandler(req: Request, res: Response) {
   const parsed = bookSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
   const { userId, unitId, serviceId, startAt, endAt } = parsed.data;
+  const barberId = parsed.data.barberId;
 
   try {
     const reservation = await lockReservation({ unitId, serviceId, startAt, endAt, ttlSeconds: 300 });
@@ -53,6 +55,7 @@ export async function bffBookHandler(req: Request, res: Response) {
       userId,
       unitId,
       serviceId,
+      barberId,
       startAt,
       endAt,
       reservationToken: reservation.token,
