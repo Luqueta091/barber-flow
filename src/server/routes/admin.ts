@@ -55,7 +55,13 @@ export function deleteUnitHandler(req: Request, res: Response) {
 }
 
 export function listUnitsHandler(_req: Request, res: Response) {
-  return res.json({ data: adminStore.listUnits() || [] });
+  adminStore
+    .listUnits()
+    .then((data) => res.json({ data: Array.isArray(data) ? data : [] }))
+    .catch((err) => {
+      console.error(err);
+      res.status(500).json({ data: [] });
+    });
 }
 
 export function createServiceHandler(req: Request, res: Response) {
@@ -86,7 +92,13 @@ export function deleteServiceHandler(req: Request, res: Response) {
 
 export function listServicesHandler(req: Request, res: Response) {
   const unitId = req.query.unitId as string | undefined;
-  return res.json({ data: adminStore.listServices(unitId) || [] });
+  adminStore
+    .listServices(unitId)
+    .then((data) => res.json({ data: Array.isArray(data) ? data : [] }))
+    .catch((err) => {
+      console.error(err);
+      res.status(500).json({ data: [] });
+    });
 }
 
 export function createBarberHandler(req: Request, res: Response) {
@@ -111,5 +123,11 @@ export function deleteBarberHandler(req: Request, res: Response) {
 }
 
 export function listBarbersHandler(_req: Request, res: Response) {
-  return res.json({ data: adminStore.listBarbers() || [] });
+  adminStore
+    .listBarbers()
+    .then((data) => res.json({ data: Array.isArray(data) ? data : [] }))
+    .catch((err) => {
+      console.error(err);
+      res.status(500).json({ data: [] });
+    });
 }
