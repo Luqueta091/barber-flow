@@ -7,7 +7,7 @@ interface Props {
 
 const stateColors: Record<Slot["state"], string> = {
   free: "bg-white text-slate-700 border-slate-200 hover:border-emerald-400 hover:text-emerald-600",
-  blocked: "bg-slate-100 text-slate-500 border-slate-200",
+  blocked: "bg-slate-200 text-slate-500 border-slate-300",
   booked: "bg-emerald-600 text-white border-emerald-600",
 };
 

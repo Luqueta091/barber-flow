@@ -73,13 +73,21 @@ export default function StaffDashboardPage() {
 
   const reloadSlots = useCallback(async () => {
     try {
-      // Aqui poderia chamar GET /units/{id}/availability?serviceId=...&startDate=...&endDate=...
-      // Por simplicidade, reaproveita o mock atual.
-      setSlots((prev) => [...prev]);
+      if (!unitId || !serviceId) return;
+      const today = new Date().toISOString().slice(0, 10);
+      const res = await apiFetch(`/units/${unitId}/availability?serviceId=${serviceId}&startDate=${today}&endDate=${today}`);
+      const apiSlots: Slot[] =
+        res.data?.[0]?.slots?.map((s: any, idx: number) => ({
+          id: `${idx}-${s.start}`,
+          start: s.start,
+          end: s.end,
+          state: "free",
+        })) ?? [];
+      setSlots(apiSlots);
     } catch (err) {
       console.error(err);
     }
-  }, []);
+  }, [apiFetch, unitId, serviceId]);
 
   useEffect(() => {
     (async () => {
@@ -118,16 +126,9 @@ export default function StaffDashboardPage() {
       }
 
       // Slots iniciais simples (mantém mock enquanto não há endpoint específico)
-      setSlots(
-        Array.from({ length: 8 }).map((_, i) => {
-          const start = new Date();
-          start.setHours(9 + i, 0, 0, 0);
-          const end = new Date(start.getTime() + 30 * 60_000);
-          return { id: `slot-${i}`, start: start.toISOString(), end: end.toISOString(), state: i % 3 === 0 ? "booked" : "free" };
-        }),
-      );
+      await reloadSlots();
     })();
-  }, [apiFetch, reloadAppointments, session]);
+  }, [apiFetch, reloadAppointments, reloadSlots, session]);
 
   useEffect(() => {
     if (!selectedBarberId && barbers.length) {
@@ -154,6 +155,7 @@ export default function StaffDashboardPage() {
           }),
         });
         setSlots((prev) => prev.map((s) => (s.id === slot.id ? { ...s, state: "blocked", reservationToken: res.reservationToken } : s)));
+        setNotifications((n) => [{ id: crypto.randomUUID(), message: "Horário bloqueado.", type: "info" }, ...n]);
       } else if (slot.state === "blocked") {
         if (slot.reservationToken) {
           await apiFetch("/slots/release", {
@@ -162,10 +164,11 @@ export default function StaffDashboardPage() {
           });
         }
         setSlots((prev) => prev.map((s) => (s.id === slot.id ? { ...s, state: "free", reservationToken: undefined } : s)));
+        setNotifications((n) => [{ id: crypto.randomUUID(), message: "Bloqueio removido.", type: "info" }, ...n]);
       }
     } catch (err) {
       console.error(err);
-      alert("Erro ao alterar slot");
+      setNotifications((n) => [{ id: crypto.randomUUID(), message: "Falha ao alterar slot (possível conflito).", type: "alert" }, ...n]);
     }
   };
 

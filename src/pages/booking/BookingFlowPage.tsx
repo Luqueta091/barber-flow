@@ -51,36 +51,52 @@ export function BookingFlowPage() {
   useEffect(() => {
     (async () => {
       try {
-        const unitsRes = await apiFetch("/admin/units");
-        setUnits(Array.isArray(unitsRes.data) ? unitsRes.data : []);
+        const [unitsRes, servicesRes, barbersRes] = await Promise.all([
+          apiFetch("/admin/units"),
+          apiFetch("/admin/services"),
+          apiFetch("/admin/barbers"),
+        ]);
+        const unitsData = Array.isArray(unitsRes.data) ? unitsRes.data : [];
+        const servicesData = (Array.isArray(servicesRes.data) ? servicesRes.data : []).map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          price: Number(s.price ?? 0),
+          durationMin: s.durationMinutes ?? 30,
+          description: s.description,
+          unitId: s.unitId,
+        }));
+        const barbersData = Array.isArray(barbersRes.data) ? barbersRes.data : [];
+        setUnits(unitsData);
+        setServices(servicesData);
+        setBarbers(barbersData);
+
+        // Carrega agendamentos do usuário logado
+        if (session?.user?.id) {
+          try {
+            const today = new Date().toISOString().slice(0, 10);
+            const res = await apiFetch(`/appointments?userId=${session.user.id}&date=${today}`);
+            const list = Array.isArray(res.data) ? res.data : [];
+            const mapped: Appointment[] = list.map((a: any) => ({
+              id: a.id,
+              unit: unitsData.find((u) => u.id === a.unitId) || { id: a.unitId, name: a.unitId },
+              service: servicesData.find((s) => s.id === a.serviceId) || { id: a.serviceId, name: a.serviceId, price: 0, durationMin: 30 },
+              barber: barbersData.find((b) => b.id === a.barberId),
+              startAt: a.startAt,
+              endAt: a.endAt,
+              status: a.status || "scheduled",
+            }));
+            setAppointments(mapped);
+          } catch (err) {
+            console.error("Falha ao carregar seus agendamentos", err);
+          }
+        }
       } catch {
         setUnits([]);
-      }
-
-      try {
-        const servicesRes = await apiFetch("/admin/services");
-        setServices(
-          (Array.isArray(servicesRes.data) ? servicesRes.data : []).map((s: any) => ({
-            id: s.id,
-            name: s.name,
-            price: Number(s.price ?? 0),
-            durationMin: s.durationMinutes ?? 30,
-            description: s.description,
-            unitId: s.unitId,
-          })),
-        );
-      } catch {
         setServices([]);
-      }
-
-      try {
-        const barbersRes = await apiFetch("/admin/barbers");
-        setBarbers(Array.isArray(barbersRes.data) ? barbersRes.data : []);
-      } catch {
         setBarbers([]);
       }
     })();
-  }, [apiFetch]);
+  }, [apiFetch, session?.user?.id]);
 
   const handleAskSlots = useCallback(
     async (dateISO: string, unitId: string, serviceId: string) => {
@@ -133,6 +149,20 @@ export function BookingFlowPage() {
     [apiFetch, session],
   );
 
+  const handleCancel = useCallback(
+    async (id: string) => {
+      try {
+        await apiFetch(`/appointments/${id}/cancel`, { method: "POST" });
+        setAppointments((prev) => prev.map((a) => (a.id === id ? { ...a, status: "cancelled" } : a)));
+        setToast({ message: "Agendamento cancelado.", kind: "success" });
+      } catch (err) {
+        console.error(err);
+        setToast({ message: "Falha ao cancelar agendamento.", kind: "error" });
+      }
+    },
+    [apiFetch],
+  );
+
   useEffect(() => {
     if (!toast) return;
     const id = setTimeout(() => setToast(null), 4000);
@@ -158,7 +188,7 @@ export function BookingFlowPage() {
               onCancel={() => setView("dashboard")}
             />
           )}
-          {view === "appointments" && <AppointmentsList appointments={appointments} />}
+          {view === "appointments" && <AppointmentsList appointments={appointments} onCancel={handleCancel} />}
           {view === "metrics" && <MetricsView appointments={appointments} />}
         </div>
       </div>

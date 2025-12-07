@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import { lockSlot, releaseSlot } from "./controllers/slots.js";
 import { getAvailability } from "./routes/availability.js";
-import { createAppointmentHandler, listAppointmentsHandler } from "./routes/appointments.js";
+import { createAppointmentHandler, listAppointmentsHandler, cancelAppointmentHandler } from "./routes/appointments.js";
 import { requestOtpHandler, verifyOtpHandler, barberPinLoginHandler } from "./routes/auth.js";
 import { createUserHandler, getUserHandler, updateUserHandler, deleteUserHandler, searchUserHandler } from "./routes/users.js";
 import { initSchema } from "./db.js";
@@ -63,6 +63,7 @@ export function createApp() {
   app.get("/units/:id/availability", getAvailability);
   app.post("/appointments", createAppointmentHandler);
   app.get("/appointments", listAppointmentsHandler);
+  app.post("/appointments/:id/cancel", cancelAppointmentHandler);
   app.post("/auth/request-otp", requestOtpHandler);
   app.post("/auth/verify-otp", verifyOtpHandler);
   app.post("/auth/barber-pin", barberPinLoginHandler);

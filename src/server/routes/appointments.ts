@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { lockReservation, confirmReservation } from "../repositories/reservationsRepo.js";
-import { createAppointment as createAppointmentDb, listAppointments } from "../repositories/appointmentsRepo.js";
+import { createAppointment as createAppointmentDb, listAppointments, cancelAppointment } from "../repositories/appointmentsRepo.js";
 import { v4 as uuid } from "uuid";
 
 const createSchema = z.object({
@@ -37,9 +37,23 @@ export async function createAppointmentHandler(req: Request, res: Response) {
 export async function listAppointmentsHandler(req: Request, res: Response) {
   const date = (req.query.date as string | undefined) || undefined;
   const barberId = (req.query.barberId as string | undefined) || undefined;
+  const userId = (req.query.userId as string | undefined) || undefined;
   try {
-    const data = await listAppointments(date, barberId);
+    const data = await listAppointments(date, barberId, userId);
     return res.json({ data });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "internal_error" });
+  }
+}
+
+export async function cancelAppointmentHandler(req: Request, res: Response) {
+  const id = req.params.id;
+  if (!id) return res.status(400).json({ error: "invalid_payload" });
+  try {
+    const ok = await cancelAppointment(id);
+    if (!ok) return res.status(404).json({ error: "not_found" });
+    return res.status(200).json({ status: "cancelled" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "internal_error" });

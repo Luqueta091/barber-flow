@@ -32,35 +32,41 @@ export async function createAppointment(input: AppointmentInput) {
   return { id, ...input, status: "scheduled" as AppointmentStatus };
 }
 
-export async function listAppointments(date?: string, barberId?: string) {
+export async function listAppointments(date?: string, barberId?: string, userId?: string) {
+  const params: any[] = [];
+  let conditions: string[] = [];
+
   if (date) {
     const start = new Date(date);
     const end = new Date(date);
     end.setUTCHours(23, 59, 59, 999);
-    const params: any[] = [start.toISOString(), end.toISOString()];
-    let sql = `
-      SELECT id,user_id as "userId",unit_id as "unitId",service_id as "serviceId",barber_id as "barberId",start_at as "startAt",end_at as "endAt",status,reservation_token as "reservationToken"
-      FROM appointments
-      WHERE start_at >= $1 AND start_at <= $2
-    `;
-    if (barberId) {
-      sql += ` AND barber_id = $3`;
-      params.push(barberId);
-    }
-    sql += ` ORDER BY start_at ASC`;
-    const res = await pool.query(sql, params);
-    return res.rows;
+    params.push(start.toISOString(), end.toISOString());
+    conditions.push(`start_at >= $${params.length - 1} AND start_at <= $${params.length}`);
   }
-  const params: any[] = [];
-  let sql = `
+
+  if (barberId) {
+    params.push(barberId);
+    conditions.push(`barber_id = $${params.length}`);
+  }
+  if (userId) {
+    params.push(userId);
+    conditions.push(`user_id = $${params.length}`);
+  }
+
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const res = await pool.query(
+    `
     SELECT id,user_id as "userId",unit_id as "unitId",service_id as "serviceId",barber_id as "barberId",start_at as "startAt",end_at as "endAt",status,reservation_token as "reservationToken"
     FROM appointments
-  `;
-  if (barberId) {
-    sql += ` WHERE barber_id = $1`;
-    params.push(barberId);
-  }
-  sql += ` ORDER BY start_at DESC`;
-  const res = await pool.query(sql, params);
+    ${where}
+    ORDER BY start_at DESC
+  `,
+    params,
+  );
   return res.rows;
+}
+
+export async function cancelAppointment(id: string) {
+  const res = await pool.query(`UPDATE appointments SET status='cancelled' WHERE id=$1`, [id]);
+  return res.rowCount > 0;
 }
