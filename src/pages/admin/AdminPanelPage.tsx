@@ -216,7 +216,14 @@ export default function AdminPanelPage() {
               units={units}
               form={unitForm}
               onFormChange={setUnitForm}
-              onCreate={() => createUnit({ ...unitForm, timezone: defaultTimezone })}
+              onCreate={() => {
+                if (!unitForm.name || !unitForm.address || !unitForm.openTime || !unitForm.closeTime || !unitForm.capacity) {
+                  alert("Preencha nome, endereço, horário de abertura/fechamento e capacidade.");
+                  return;
+                }
+                const safeCapacity = Number(unitForm.capacity) || 1;
+                createUnit({ ...unitForm, capacity: safeCapacity, timezone: defaultTimezone });
+              }}
               onDelete={deleteUnit}
               onToggle={(id) => {
                 const unit = units.find((u) => u.id === id);
