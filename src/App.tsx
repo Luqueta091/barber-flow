@@ -1,19 +1,48 @@
 import { useEffect, useState } from "react";
 import LoginPage from "./pages/LoginPage";
 import { BookingFlowPage } from "./pages/booking/BookingFlowPage";
+import StaffDashboardPage from "./pages/staff/StaffDashboardPage";
 
 const SESSION_KEY = "barber-flow-session";
 
 const App = () => {
   const [hasSession, setHasSession] = useState(false);
+  const [isStaff, setIsStaff] = useState(false);
 
   useEffect(() => {
     const raw = localStorage.getItem(SESSION_KEY);
-    setHasSession(!!raw);
+    if (raw) {
+      setHasSession(true);
+      try {
+        const parsed = JSON.parse(raw) as { role?: string };
+        setIsStaff(parsed.role === "staff" || parsed.role === "admin");
+      } catch (e) {
+        console.error(e);
+      }
+    }
   }, []);
 
   if (!hasSession) {
-    return <LoginPage onLogin={() => setHasSession(true)} />;
+    return (
+      <LoginPage
+        onLogin={() => {
+          setHasSession(true);
+          const raw = localStorage.getItem(SESSION_KEY);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw) as { role?: string };
+              setIsStaff(parsed.role === "staff" || parsed.role === "admin");
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }}
+      />
+    );
+  }
+
+  if (isStaff) {
+    return <StaffDashboardPage />;
   }
 
   return <BookingFlowPage />;
