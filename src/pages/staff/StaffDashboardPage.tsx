@@ -142,15 +142,17 @@ export default function StaffDashboardPage() {
     })();
   }, [apiFetch, session]);
 
+  // Recarrega dados quando filtros mudam
   useEffect(() => {
     if (!isReady) return;
     if (!selectedBarberId && barbers.length) {
       setSelectedBarberId(session?.barber?.id || barbers[0].id);
+      return;
     }
     reloadAppointments();
     reloadBlocks();
     reloadSlots();
-  }, [isReady, selectedDate, unitId, serviceId, selectedBarberId, reloadAppointments, reloadBlocks, reloadSlots, barbers, session]);
+  }, [isReady, selectedDate, unitId, serviceId, selectedBarberId, barbers.length, session, reloadAppointments, reloadBlocks, reloadSlots]);
 
   const handleToggleSlot = async (slot: Slot) => {
     try {
