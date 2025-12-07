@@ -332,6 +332,7 @@ function UnitsSection({
   onFormChange: (v: Partial<Unit>) => void;
   editingId: string | null;
 }) {
+  const safeUnits = Array.isArray(units) ? units : [];
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
       <div className="flex justify-between items-center mb-4">
@@ -374,7 +375,7 @@ function UnitsSection({
         />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {units.map((u) => (
+        {safeUnits.map((u) => (
           <div key={u.id} data-unit-id={u.id} className="p-4 border border-slate-200 rounded-xl bg-white flex flex-col gap-2">
             <div className="flex justify-between items-center">
               <div className="font-bold text-slate-900 text-lg">{u.name}</div>
@@ -407,7 +408,7 @@ function UnitsSection({
             </div>
           </div>
         ))}
-        {units.length === 0 && <div className="text-slate-500 text-sm">Nenhuma unidade cadastrada.</div>}
+        {safeUnits.length === 0 && <div className="text-slate-500 text-sm">Nenhuma unidade cadastrada.</div>}
       </div>
     </div>
   );
@@ -434,6 +435,8 @@ function ServicesSection({
   onFormChange: (v: Partial<Service>) => void;
   editingId: string | null;
 }) {
+  const safeServices = Array.isArray(services) ? services : [];
+  const safeUnits = Array.isArray(units) ? units : [];
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
       <div className="flex justify-between items-center mb-4">
@@ -490,11 +493,11 @@ function ServicesSection({
             onChange={(e) => onFormChange({ ...form, unitId: e.target.value })}
           >
             <option value="">Selecione</option>
-            {units.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
+          {safeUnits.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
           </select>
         </div>
       </div>
@@ -510,8 +513,8 @@ function ServicesSection({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {services.map((s) => {
-              const unit = units.find((u) => u.id === s.unitId);
+            {safeServices.map((s) => {
+              const unit = safeUnits.find((u) => u.id === s.unitId);
               return (
                 <tr key={s.id} data-service-id={s.id} className="text-slate-800">
                   <td className="py-3 pr-4 font-semibold">{s.name}</td>
@@ -537,7 +540,7 @@ function ServicesSection({
                 </tr>
               );
             })}
-            {services.length === 0 && (
+            {safeServices.length === 0 && (
               <tr>
                 <td className="py-3 pr-4 text-slate-500" colSpan={5}>
                   Nenhum serviço cadastrado.
@@ -570,6 +573,7 @@ function BarbersSection({
   onFormChange: (v: Partial<Barber>) => void;
   editingId: string | null;
 }) {
+  const safeBarbers = Array.isArray(barbers) ? barbers : [];
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
       <div className="flex justify-between items-center mb-4">
@@ -601,7 +605,7 @@ function BarbersSection({
         </select>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {barbers.map((b) => (
+        {safeBarbers.map((b) => (
           <div key={b.id} data-barber-id={b.id} className="p-4 border border-slate-200 rounded-xl bg-white">
             <div className="font-bold text-slate-900 text-lg">{b.name}</div>
             {b.contact && <div className="text-slate-500 text-sm">{b.contact}</div>}
@@ -624,7 +628,7 @@ function BarbersSection({
             </div>
           </div>
         ))}
-        {barbers.length === 0 && <div className="text-slate-500 text-sm">Nenhum barbeiro cadastrado.</div>}
+        {safeBarbers.length === 0 && <div className="text-slate-500 text-sm">Nenhum barbeiro cadastrado.</div>}
       </div>
     </div>
   );
