@@ -299,6 +299,7 @@ export default function AdminPanelPage() {
               }}
               onDelete={deleteBarber}
               editingId={editingBarberId}
+              units={units}
             />
           )}
         </div>
@@ -570,6 +571,7 @@ function BarbersSection({
   form,
   onFormChange,
   editingId,
+  units,
 }: {
   barbers: Barber[];
   onCreate: () => void;
@@ -579,8 +581,10 @@ function BarbersSection({
   form: Partial<Barber>;
   onFormChange: (v: Partial<Barber>) => void;
   editingId: string | null;
+  units: Unit[];
 }) {
   const safeBarbers = Array.isArray(barbers) ? barbers : [];
+  const safeUnits = Array.isArray(units) ? units : [];
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
       <div className="flex justify-between items-center mb-4">
@@ -610,6 +614,31 @@ function BarbersSection({
           <option value="active">Ativo</option>
           <option value="inactive">Inativo</option>
         </select>
+        <div className="p-3 rounded-xl border border-slate-200">
+          <div className="text-xs font-semibold text-slate-600 mb-2">Unidades</div>
+          <div className="flex flex-wrap gap-2">
+            {safeUnits.map((u) => {
+              const selected = form.units?.includes(u.id);
+              return (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => {
+                    const current = form.units ?? [];
+                    const next = selected ? current.filter((id) => id !== u.id) : [...current, u.id];
+                    onFormChange({ ...form, units: next });
+                  }}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold border ${
+                    selected ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-600 border-slate-200 hover:border-emerald-400"
+                  }`}
+                >
+                  {u.name}
+                </button>
+              );
+            })}
+            {safeUnits.length === 0 && <div className="text-slate-400 text-sm">Cadastre uma unidade primeiro.</div>}
+          </div>
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {safeBarbers.map((b) => (
