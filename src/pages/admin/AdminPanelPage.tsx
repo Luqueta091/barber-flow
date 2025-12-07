@@ -15,6 +15,12 @@ export default function AdminPanelPage() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>(mockBarbers);
+  const [unitForm, setUnitForm] = useState<Partial<Unit>>({ name: "", address: "", openTime: "09:00", closeTime: "18:00", capacity: 1 });
+  const [editingUnitId, setEditingUnitId] = useState<string | null>(null);
+  const [serviceForm, setServiceForm] = useState<Partial<Service>>({ name: "", durationMinutes: 30, capacity: 1, price: 0 });
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+  const [barberForm, setBarberForm] = useState<Partial<Barber>>({ name: "", contact: "" });
+  const [editingBarberId, setEditingBarberId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,6 +91,7 @@ export default function AdminPanelPage() {
       };
       const res = await api.send("/admin/units", "POST", payload);
       setUnits((prev) => [...prev, res]);
+      setUnitForm({ name: "", address: "", openTime: "09:00", closeTime: "18:00", capacity: 1 });
     },
     [api],
   );
@@ -119,6 +126,7 @@ export default function AdminPanelPage() {
       };
       const res = await api.send("/admin/services", "POST", payload);
       setServices((prev) => [...prev, res]);
+      setServiceForm({ name: "", durationMinutes: 30, capacity: 1, price: 0 });
     },
     [api],
   );
@@ -149,6 +157,7 @@ export default function AdminPanelPage() {
       };
       const res = await api.send("/admin/barbers", "POST", payload);
       setBarbers((prev) => [...prev, res]);
+      setBarberForm({ name: "", contact: "" });
     },
     [api],
   );
@@ -191,28 +200,32 @@ export default function AdminPanelPage() {
           {tab === "units" && (
             <UnitsSection
               units={units}
-              onCreate={() => {
-                const name = window.prompt("Nome da unidade", "Nova unidade") || "Nova unidade";
-                const address = window.prompt("Endereço", "") || "";
-                const openTime = window.prompt("Hora de abertura (HH:mm)", "09:00") || "09:00";
-                const closeTime = window.prompt("Hora de fechamento (HH:mm)", "18:00") || "18:00";
-                const capacity = Number(window.prompt("Capacidade por hora", "1") || 1);
-                createUnit({ name, address, openTime, closeTime, capacity, timezone: defaultTimezone });
-              }}
+              form={unitForm}
+              onFormChange={setUnitForm}
+              onCreate={() => createUnit({ ...unitForm, timezone: defaultTimezone })}
               onDelete={deleteUnit}
               onToggle={(id) => {
                 const unit = units.find((u) => u.id === id);
                 if (!unit) return;
                 updateUnit(id, { isActive: !unit.isActive });
               }}
-              onEdit={(u) => {
-                const name = window.prompt("Nome da unidade", u.name) || u.name;
-                const address = window.prompt("Endereço", u.address || "") || u.address;
-                const openTime = window.prompt("Hora de abertura", u.openTime || "09:00") || u.openTime;
-                const closeTime = window.prompt("Hora de fechamento", u.closeTime || "18:00") || u.closeTime;
-                const capacity = Number(window.prompt("Capacidade por hora", String(u.capacity ?? 1)) || u.capacity || 1);
-                updateUnit(u.id, { name, address, openTime, closeTime, capacity });
+              onEditStart={(u) => {
+                setEditingUnitId(u.id);
+                setUnitForm({
+                  name: u.name,
+                  address: u.address,
+                  openTime: u.openTime,
+                  closeTime: u.closeTime,
+                  capacity: u.capacity,
+                });
               }}
+              onSaveEdit={(u) => {
+                if (!editingUnitId) return;
+                updateUnit(editingUnitId, u);
+                setEditingUnitId(null);
+                setUnitForm({ name: "", address: "", openTime: "09:00", closeTime: "18:00", capacity: 1 });
+              }}
+              editingId={editingUnitId}
             />
           )}
 
@@ -220,37 +233,51 @@ export default function AdminPanelPage() {
             <ServicesSection
               services={services}
               units={units}
+              form={serviceForm}
+              onFormChange={setServiceForm}
               onCreate={() => {
                 if (!units[0]) return;
-                const name = window.prompt("Nome do serviço", "Novo serviço") || "Novo serviço";
-                const price = Number(window.prompt("Preço", "0") || 0);
-                const duration = Number(window.prompt("Duração (min)", "30") || 30);
-                createService({ unitId: units[0].id, name, durationMinutes: duration, bufferAfterMinutes: 0, capacity: 1, price });
+                createService({ ...serviceForm, unitId: serviceForm.unitId || units[0].id });
               }}
               onDelete={deleteService}
-              onEdit={(svc) => {
-                const name = window.prompt("Nome do serviço", svc.name) || svc.name;
-                const price = Number(window.prompt("Preço", String(svc.price ?? 0)) || svc.price || 0);
-                const duration = Number(window.prompt("Duração (min)", String(svc.durationMinutes)) || svc.durationMinutes);
-                updateService(svc.id, { name, price, durationMinutes: duration });
+              onEditStart={(svc) => {
+                setEditingServiceId(svc.id);
+                setServiceForm({
+                  name: svc.name,
+                  price: svc.price,
+                  durationMinutes: svc.durationMinutes,
+                  capacity: svc.capacity,
+                  unitId: svc.unitId,
+                });
               }}
+              onSaveEdit={(svc) => {
+                if (!editingServiceId) return;
+                updateService(editingServiceId, svc);
+                setEditingServiceId(null);
+                setServiceForm({ name: "", durationMinutes: 30, capacity: 1, price: 0 });
+              }}
+              editingId={editingServiceId}
             />
           )}
 
           {tab === "barbers" && (
             <BarbersSection
               barbers={barbers}
-              onCreate={() => {
-                const name = window.prompt("Nome do barbeiro", "Barbeiro") || "Barbeiro";
-                const contact = window.prompt("Contato", "") || "";
-                createBarber({ name, contact, units: units.map((u) => u.id) });
+              form={barberForm}
+              onFormChange={setBarberForm}
+              onCreate={() => createBarber(barberForm)}
+              onEditStart={(b) => {
+                setEditingBarberId(b.id);
+                setBarberForm({ name: b.name, contact: b.contact });
               }}
-              onEdit={(b) => {
-                const name = window.prompt("Nome", b.name) || b.name;
-                const contact = window.prompt("Contato", b.contact || "") || b.contact;
-                updateBarber(b.id, { name, contact });
+              onSaveEdit={(b) => {
+                if (!editingBarberId) return;
+                updateBarber(editingBarberId, b);
+                setEditingBarberId(null);
+                setBarberForm({ name: "", contact: "" });
               }}
               onDelete={deleteBarber}
+              editingId={editingBarberId}
             />
           )}
         </div>
@@ -275,13 +302,21 @@ function UnitsSection({
   onCreate,
   onDelete,
   onToggle,
-  onEdit,
+  onEditStart,
+  onSaveEdit,
+  form,
+  onFormChange,
+  editingId,
 }: {
   units: Unit[];
   onCreate: () => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
-  onEdit: (u: Unit) => void;
+  onEditStart: (u: Unit) => void;
+  onSaveEdit: (u: Partial<Unit>) => void;
+  form: Partial<Unit>;
+  onFormChange: (v: Partial<Unit>) => void;
+  editingId: string | null;
 }) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
@@ -290,6 +325,39 @@ function UnitsSection({
         <button onClick={onCreate} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all">
           + Unidade
         </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Nome"
+          value={form.name || ""}
+          onChange={(e) => onFormChange({ ...form, name: e.target.value })}
+        />
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Endereço"
+          value={form.address || ""}
+          onChange={(e) => onFormChange({ ...form, address: e.target.value })}
+        />
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Abre (HH:mm)"
+          value={form.openTime || ""}
+          onChange={(e) => onFormChange({ ...form, openTime: e.target.value })}
+        />
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Fecha (HH:mm)"
+          value={form.closeTime || ""}
+          onChange={(e) => onFormChange({ ...form, closeTime: e.target.value })}
+        />
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Capacidade/h"
+          type="number"
+          value={form.capacity ?? ""}
+          onChange={(e) => onFormChange({ ...form, capacity: Number(e.target.value) })}
+        />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {units.map((u) => (
@@ -308,9 +376,17 @@ function UnitsSection({
               <button onClick={() => onToggle(u.id)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">
                 Alternar
               </button>
-              <button onClick={() => onEdit(u)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+              <button onClick={() => onEditStart(u)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
                 Editar
               </button>
+              {editingId === u.id && (
+                <button
+                  onClick={() => onSaveEdit(form)}
+                  className="px-3 py-2 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100"
+                >
+                  Salvar
+                </button>
+              )}
               <button onClick={() => onDelete(u.id)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100">
                 Remover
               </button>
@@ -328,13 +404,21 @@ function ServicesSection({
   units,
   onCreate,
   onDelete,
-  onEdit,
+  onEditStart,
+  onSaveEdit,
+  form,
+  onFormChange,
+  editingId,
 }: {
   services: Service[];
   units: Unit[];
   onCreate: () => void;
   onDelete: (id: string) => void;
-  onEdit: (s: Service) => void;
+  onEditStart: (s: Service) => void;
+  onSaveEdit: (s: Partial<Service>) => void;
+  form: Partial<Service>;
+  onFormChange: (v: Partial<Service>) => void;
+  editingId: string | null;
 }) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
@@ -343,6 +427,47 @@ function ServicesSection({
         <button onClick={onCreate} className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all">
           + Serviço
         </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Nome"
+          value={form.name || ""}
+          onChange={(e) => onFormChange({ ...form, name: e.target.value })}
+        />
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Preço"
+          type="number"
+          value={form.price ?? ""}
+          onChange={(e) => onFormChange({ ...form, price: Number(e.target.value) })}
+        />
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Duração (min)"
+          type="number"
+          value={form.durationMinutes ?? ""}
+          onChange={(e) => onFormChange({ ...form, durationMinutes: Number(e.target.value) })}
+        />
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Capacidade"
+          type="number"
+          value={form.capacity ?? ""}
+          onChange={(e) => onFormChange({ ...form, capacity: Number(e.target.value) })}
+        />
+        <select
+          className="p-3 rounded-xl border border-slate-200"
+          value={form.unitId || ""}
+          onChange={(e) => onFormChange({ ...form, unitId: e.target.value })}
+        >
+          <option value="">Unidade</option>
+          {units.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
@@ -365,12 +490,17 @@ function ServicesSection({
                   <td className="py-3 pr-4">{s.capacity}</td>
                   <td className="py-3 pr-4">{unit?.name || s.unitId}</td>
                   <td className="py-3 pr-4">
-                    <button
-                      onClick={() => onEdit(s)}
-                      className="mr-2 px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                    >
+                    <button onClick={() => onEditStart(s)} className="mr-2 px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
                       Editar
                     </button>
+                    {editingId === s.id && (
+                      <button
+                        onClick={() => onSaveEdit(form)}
+                        className="mr-2 px-3 py-2 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100"
+                      >
+                        Salvar
+                      </button>
+                    )}
                     <button onClick={() => onDelete(s.id)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100">
                       Remover
                     </button>
@@ -395,13 +525,21 @@ function ServicesSection({
 function BarbersSection({
   barbers,
   onCreate,
-  onEdit,
+  onEditStart,
+  onSaveEdit,
   onDelete,
+  form,
+  onFormChange,
+  editingId,
 }: {
   barbers: Barber[];
   onCreate: () => void;
-  onEdit: (b: Barber) => void;
+  onEditStart: (b: Barber) => void;
+  onSaveEdit: (b: Partial<Barber>) => void;
   onDelete: (id: string) => void;
+  form: Partial<Barber>;
+  onFormChange: (v: Partial<Barber>) => void;
+  editingId: string | null;
 }) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
@@ -411,6 +549,28 @@ function BarbersSection({
           + Barbeiro
         </button>
       </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Nome"
+          value={form.name || ""}
+          onChange={(e) => onFormChange({ ...form, name: e.target.value })}
+        />
+        <input
+          className="p-3 rounded-xl border border-slate-200"
+          placeholder="Contato"
+          value={form.contact || ""}
+          onChange={(e) => onFormChange({ ...form, contact: e.target.value })}
+        />
+        <select
+          className="p-3 rounded-xl border border-slate-200"
+          value={form.isActive === false ? "inactive" : "active"}
+          onChange={(e) => onFormChange({ ...form, isActive: e.target.value === "active" })}
+        >
+          <option value="active">Ativo</option>
+          <option value="inactive">Inativo</option>
+        </select>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {barbers.map((b) => (
           <div key={b.id} data-barber-id={b.id} className="p-4 border border-slate-200 rounded-xl bg-white">
@@ -418,9 +578,17 @@ function BarbersSection({
             {b.contact && <div className="text-slate-500 text-sm">{b.contact}</div>}
             <div className="text-xs text-slate-500 mt-1">Unidades: {b.units?.length ? b.units.join(", ") : "Não vinculado"}</div>
             <div className="flex gap-2 mt-3">
-              <button onClick={() => onEdit(b)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
+              <button onClick={() => onEditStart(b)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100">
                 Editar
               </button>
+              {editingId === b.id && (
+                <button
+                  onClick={() => onSaveEdit(form)}
+                  className="px-3 py-2 rounded-lg text-sm font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100"
+                >
+                  Salvar
+                </button>
+              )}
               <button onClick={() => onDelete(b.id)} className="px-3 py-2 rounded-lg text-sm font-semibold bg-red-50 text-red-600 hover:bg-red-100">
                 Remover
               </button>
