@@ -31,103 +31,103 @@ const barberSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export function createUnitHandler(req: Request, res: Response) {
+export async function createUnitHandler(req: Request, res: Response) {
   const parsed = unitSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
-  const unit = adminStore.createUnit(parsed.data);
+  const unit = await adminStore.createUnit(parsed.data);
   return res.status(201).json(unit);
 }
 
-export function updateUnitHandler(req: Request, res: Response) {
+export async function updateUnitHandler(req: Request, res: Response) {
   const parsed = unitSchema.partial().safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
-  const unit = adminStore.updateUnit(req.params.id, parsed.data);
+  const unit = await adminStore.updateUnit(req.params.id, parsed.data);
   if (!unit) return res.status(404).json({ error: "not_found" });
   return res.json(unit);
 }
 
-export function deleteUnitHandler(req: Request, res: Response) {
-  const ok = adminStore.deleteUnit(req.params.id);
+export async function deleteUnitHandler(req: Request, res: Response) {
+  const ok = await adminStore.deleteUnit(req.params.id);
   if (!ok) return res.status(404).json({ error: "not_found" });
   // Invalidate cache for unit
   availabilityCache.invalidateUnit(req.params.id);
   return res.status(204).send();
 }
 
-export function listUnitsHandler(_req: Request, res: Response) {
-  adminStore
-    .listUnits()
-    .then((data) => res.json({ data: Array.isArray(data) ? data : [] }))
-    .catch((err) => {
-      console.error(err);
-      res.status(500).json({ data: [] });
-    });
+export async function listUnitsHandler(_req: Request, res: Response) {
+  try {
+    const data = await adminStore.listUnits();
+    return res.json({ data: Array.isArray(data) ? data : [] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ data: [] });
+  }
 }
 
-export function createServiceHandler(req: Request, res: Response) {
+export async function createServiceHandler(req: Request, res: Response) {
   const parsed = serviceSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
-  const svc = adminStore.createService(parsed.data);
-  availabilityCache.invalidateUnit(svc.unitId);
+  const svc = await adminStore.createService(parsed.data);
+  await availabilityCache.invalidateUnit(svc.unitId);
   return res.status(201).json(svc);
 }
 
-export function updateServiceHandler(req: Request, res: Response) {
+export async function updateServiceHandler(req: Request, res: Response) {
   const parsed = serviceSchema.partial().safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
-  const svc = adminStore.updateService(req.params.id, parsed.data);
+  const svc = await adminStore.updateService(req.params.id, parsed.data);
   if (!svc) return res.status(404).json({ error: "not_found" });
-  availabilityCache.invalidateUnit(svc.unitId);
+  await availabilityCache.invalidateUnit(svc.unitId);
   return res.json(svc);
 }
 
-export function deleteServiceHandler(req: Request, res: Response) {
-  const svcList = adminStore.listServices();
+export async function deleteServiceHandler(req: Request, res: Response) {
+  const svcList = await adminStore.listServices();
   const svc = svcList.find((s) => s.id === req.params.id);
-  const ok = adminStore.deleteService(req.params.id);
+  const ok = await adminStore.deleteService(req.params.id);
   if (!ok) return res.status(404).json({ error: "not_found" });
-  if (svc) availabilityCache.invalidateUnit(svc.unitId);
+  if (svc) await availabilityCache.invalidateUnit(svc.unitId);
   return res.status(204).send();
 }
 
-export function listServicesHandler(req: Request, res: Response) {
+export async function listServicesHandler(req: Request, res: Response) {
   const unitId = req.query.unitId as string | undefined;
-  adminStore
-    .listServices(unitId)
-    .then((data) => res.json({ data: Array.isArray(data) ? data : [] }))
-    .catch((err) => {
-      console.error(err);
-      res.status(500).json({ data: [] });
-    });
+  try {
+    const data = await adminStore.listServices(unitId);
+    return res.json({ data: Array.isArray(data) ? data : [] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ data: [] });
+  }
 }
 
-export function createBarberHandler(req: Request, res: Response) {
+export async function createBarberHandler(req: Request, res: Response) {
   const parsed = barberSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
-  const barber = adminStore.createBarber(parsed.data);
+  const barber = await adminStore.createBarber(parsed.data);
   return res.status(201).json(barber);
 }
 
-export function updateBarberHandler(req: Request, res: Response) {
+export async function updateBarberHandler(req: Request, res: Response) {
   const parsed = barberSchema.partial().safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "invalid_payload" });
-  const barber = adminStore.updateBarber(req.params.id, parsed.data);
+  const barber = await adminStore.updateBarber(req.params.id, parsed.data);
   if (!barber) return res.status(404).json({ error: "not_found" });
   return res.json(barber);
 }
 
-export function deleteBarberHandler(req: Request, res: Response) {
-  const ok = adminStore.deleteBarber(req.params.id);
+export async function deleteBarberHandler(req: Request, res: Response) {
+  const ok = await adminStore.deleteBarber(req.params.id);
   if (!ok) return res.status(404).json({ error: "not_found" });
   return res.status(204).send();
 }
 
-export function listBarbersHandler(_req: Request, res: Response) {
-  adminStore
-    .listBarbers()
-    .then((data) => res.json({ data: Array.isArray(data) ? data : [] }))
-    .catch((err) => {
-      console.error(err);
-      res.status(500).json({ data: [] });
-    });
+export async function listBarbersHandler(_req: Request, res: Response) {
+  try {
+    const data = await adminStore.listBarbers();
+    return res.json({ data: Array.isArray(data) ? data : [] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ data: [] });
+  }
 }
