@@ -1,7 +1,8 @@
 import express from "express";
+import cors from "cors";
 import { lockSlot, releaseSlot } from "./controllers/slots.js";
 import { getAvailability } from "./routes/availability.js";
-import { createAppointmentHandler } from "./routes/appointments.js";
+import { createAppointmentHandler, listAppointmentsHandler } from "./routes/appointments.js";
 import { requestOtpHandler, verifyOtpHandler } from "./routes/auth.js";
 import { createUserHandler, getUserHandler, updateUserHandler, deleteUserHandler, searchUserHandler } from "./routes/users.js";
 import { initSchema } from "./db.js";
@@ -25,6 +26,14 @@ import { metricsHandler } from "./metrics.js";
 
 export function createApp() {
   const app = express();
+  app.use(
+    cors({
+      origin: "*",
+      methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization"],
+      credentials: true,
+    }),
+  );
 
   // CORS manual para garantir header mesmo quando o proxy não repassa defaults
   app.use((req, res, next) => {
@@ -48,6 +57,7 @@ export function createApp() {
   // Availability
   app.get("/units/:id/availability", getAvailability);
   app.post("/appointments", createAppointmentHandler);
+  app.get("/appointments", listAppointmentsHandler);
   app.post("/auth/request-otp", requestOtpHandler);
   app.post("/auth/verify-otp", verifyOtpHandler);
   // Users

@@ -53,7 +53,7 @@ export default function AdminPanelPage() {
       setError(null);
       try {
         const unitsRes = await api.get("/admin/units");
-        setUnits(unitsRes.data ?? []);
+        setUnits(Array.isArray(unitsRes.data) ? unitsRes.data : []);
       } catch (e) {
         console.error(e);
         setUnits([]);
@@ -61,14 +61,14 @@ export default function AdminPanelPage() {
       }
       try {
         const servicesRes = await api.get("/admin/services");
-        setServices(servicesRes.data ?? []);
+        setServices(Array.isArray(servicesRes.data) ? servicesRes.data : []);
       } catch (e) {
         console.error(e);
         setServices([]);
       }
       try {
         const barbersRes = await api.get("/admin/barbers");
-        if (barbersRes.data?.length) {
+        if (Array.isArray(barbersRes.data) && barbersRes.data.length) {
           setBarbers(barbersRes.data);
         } else {
           // Seed barbeiros mock no backend para evitar 404 em editar/remover
