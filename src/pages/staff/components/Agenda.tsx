@@ -34,6 +34,10 @@ export function Agenda({ appointments, onMarkNoShow, onCheckIn }: Props) {
                   <IconClock className="w-4 h-4" />
                   {format(new Date(appt.startAt), "dd/MM/yyyy HH:mm")}
                 </div>
+                <div className="text-slate-500 text-sm flex items-center gap-2">
+                  <IconCalendar className="w-4 h-4" />
+                  {appt.unitAddress || appt.unitName || "Local não informado"}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">

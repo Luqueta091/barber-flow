@@ -2,6 +2,8 @@ export interface Appointment {
   id: string;
   clientName: string;
   serviceName: string;
+  unitName?: string;
+  unitAddress?: string;
   startAt: string;
   status: "scheduled" | "completed" | "cancelled" | "no_show";
 }

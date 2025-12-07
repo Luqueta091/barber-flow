@@ -10,8 +10,10 @@ import { Appointment, Block, Slot } from "./types";
 const SESSION_KEY = "barber-flow-session";
 
 export default function StaffDashboardPage() {
-  const unitId = "u1";
-  const serviceId = "s1";
+  const [unitId, setUnitId] = useState<string>("");
+  const [serviceId, setServiceId] = useState<string>("");
+  const [units, setUnits] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
   const [view, setView] = useState<"agenda" | "bloqueios" | "slots" | "notificacoes">("agenda");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
@@ -38,33 +40,46 @@ export default function StaffDashboardPage() {
   );
 
   useEffect(() => {
-    // Carrega appointments reais (hoje)
     (async () => {
       try {
+        const [unitsRes, servicesRes] = await Promise.all([apiFetch("/admin/units"), apiFetch("/admin/services")]);
+        const unitList = Array.isArray(unitsRes.data) ? unitsRes.data : [];
+        const serviceList = Array.isArray(servicesRes.data) ? servicesRes.data : [];
+        setUnits(unitList);
+        setServices(serviceList);
+        if (unitList[0]) setUnitId(unitList[0].id);
+        if (serviceList[0]) setServiceId(serviceList[0].id);
+
         const today = new Date().toISOString().slice(0, 10);
         const res = await apiFetch(`/appointments?date=${today}`);
-        const data: Appointment[] = (res.data ?? []).map((a: any) => ({
-          id: a.id,
-          clientName: a.userId || "Cliente",
-          serviceName: a.serviceId,
-          startAt: a.startAt,
-          status: a.status || "scheduled",
-        }));
-        setAppointments(data);
+        const appointmentsData: Appointment[] = (res.data ?? []).map((a: any) => {
+          const unitInfo = unitList.find((u: any) => u.id === a.unitId);
+          const serviceInfo = serviceList.find((s: any) => s.id === a.serviceId);
+          return {
+            id: a.id,
+            clientName: a.userId || "Cliente",
+            serviceName: serviceInfo?.name || a.serviceId,
+            unitName: unitInfo?.name,
+            unitAddress: unitInfo?.address,
+            startAt: a.startAt,
+            status: a.status || "scheduled",
+          };
+        });
+        setAppointments(appointmentsData);
       } catch (err) {
         console.error(err);
       }
-    })();
 
-    // Slots iniciais simples
-    setSlots(
-      Array.from({ length: 8 }).map((_, i) => {
-        const start = new Date();
-        start.setHours(9 + i, 0, 0, 0);
-        const end = new Date(start.getTime() + 30 * 60_000);
-        return { id: `slot-${i}`, start: start.toISOString(), end: end.toISOString(), state: i % 3 === 0 ? "booked" : "free" };
-      }),
-    );
+      // Slots iniciais simples (mantém mock enquanto não há endpoint específico)
+      setSlots(
+        Array.from({ length: 8 }).map((_, i) => {
+          const start = new Date();
+          start.setHours(9 + i, 0, 0, 0);
+          const end = new Date(start.getTime() + 30 * 60_000);
+          return { id: `slot-${i}`, start: start.toISOString(), end: end.toISOString(), state: i % 3 === 0 ? "booked" : "free" };
+        }),
+      );
+    })();
   }, [apiFetch]);
 
   const reloadSlots = useCallback(async () => {
@@ -79,6 +94,10 @@ export default function StaffDashboardPage() {
 
   const handleToggleSlot = async (slot: Slot) => {
     try {
+      if (!unitId || !serviceId) {
+        alert("Cadastre unidade e serviço para gerenciar slots.");
+        return;
+      }
       if (slot.state === "free") {
         // Bloquear
         const res = await apiFetch("/slots/lock", {
