@@ -24,7 +24,6 @@ export default function StaffDashboardPage() {
   const [selectedBarberId, setSelectedBarberId] = useState<string>("");
   const [units, setUnits] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
-  const [isReady, setIsReady] = useState(false);
   const [view, setView] = useState<"agenda" | "bloqueios" | "slots" | "notificacoes">("agenda");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
