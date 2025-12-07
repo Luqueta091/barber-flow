@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { env } from "@/config/env";
 import { Agenda } from "./components/Agenda";
 import { BlockManager } from "./components/BlockManager";
@@ -16,6 +16,7 @@ export default function StaffDashboardPage() {
   }, []);
   const [isReady, setIsReady] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const lastSyncKeyRef = useRef<string>("");
 
   const [unitId, setUnitId] = useState<string>("");
   const [serviceId, setServiceId] = useState<string>("");
@@ -149,6 +150,9 @@ export default function StaffDashboardPage() {
       setSelectedBarberId(session?.barber?.id || barbers[0].id);
       return;
     }
+    const key = `${selectedDate}|${unitId}|${serviceId}|${selectedBarberId}`;
+    if (lastSyncKeyRef.current === key) return;
+    lastSyncKeyRef.current = key;
     reloadAppointments();
     reloadBlocks();
     reloadSlots();
@@ -259,9 +263,6 @@ export default function StaffDashboardPage() {
               selectedDate={selectedDate}
               onDateChange={(v) => {
                 setSelectedDate(v);
-                reloadBlocks();
-                reloadSlots();
-                reloadAppointments();
               }}
               onCreate={handleCreateBlock}
               onRemove={handleRemoveBlock}
@@ -276,8 +277,6 @@ export default function StaffDashboardPage() {
                   value={selectedDate}
                   onChange={(e) => {
                     setSelectedDate(e.target.value);
-                    reloadSlots();
-                    reloadAppointments();
                   }}
                   className="p-2 rounded-lg border border-slate-200"
                 />
