@@ -36,6 +36,9 @@ export default function StaffDashboardPage() {
         headers: { "Content-Type": "application/json", ...(options?.headers || {}) },
         ...options,
       });
+      if (res.status === 204) {
+        return {};
+      }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `Erro na requisição: ${res.status}`);

@@ -146,6 +146,9 @@ export async function deleteBlockHandler(req: Request, res: Response) {
   const ok = await deleteBlock(req.params.id);
   if (!ok) return res.status(404).json({ error: "not_found" });
   sseBus.publish("block_deleted", { id: req.params.id });
+  if (req.query.unitId) {
+    await availabilityCache.invalidateUnit(req.query.unitId as string);
+  }
   return res.status(204).send();
 }
 
