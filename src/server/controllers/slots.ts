@@ -50,8 +50,11 @@ export async function releaseSlot(req: Request, res: Response) {
   }
 
   const { token } = parsed.data;
+  const existing = await findReservation(token);
+  if (!existing) return res.status(404).json({ error: "not_found" });
   await releaseReservation(token);
-  const dateKey = new Date().toISOString().slice(0, 10);
-  sseBus.publish("slot_unlocked", { token, date: dateKey });
+  const dateKey = new Date(existing.startAt).toISOString().slice(0, 10);
+  await availabilityCache.invalidate({ unitId: existing.unitId, serviceId: existing.serviceId, date: dateKey });
+  sseBus.publish("slot_unlocked", { unitId: existing.unitId, serviceId: existing.serviceId, startAt: existing.startAt, endAt: existing.endAt });
   return res.status(200).json({ status: "released" });
 }

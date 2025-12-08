@@ -63,3 +63,12 @@ export async function releaseReservation(token: string) {
 export async function confirmReservation(token: string) {
   await pool.query(`UPDATE reservations SET status='confirmed' WHERE token=$1`, [token]);
 }
+
+export async function findReservation(token: string) {
+  const res = await pool.query(
+    `SELECT token,unit_id as "unitId",service_id as "serviceId",start_at as "startAt",end_at as "endAt",status,expires_at as "expiresAt"
+     FROM reservations WHERE token=$1`,
+    [token],
+  );
+  return res.rows[0] ?? null;
+}
