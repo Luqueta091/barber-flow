@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { availabilityCache } from "../../modules/availability/cache/index.js";
-import { lockReservation, releaseReservation } from "../repositories/reservationsRepo.js";
+import { lockReservation, releaseReservation, findReservation } from "../repositories/reservationsRepo.js";
 import { sseBus } from "../events/bus.js";
 
 const lockSchema = z.object({
