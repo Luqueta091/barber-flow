@@ -99,6 +99,8 @@ export default function StaffDashboardPage() {
       setSlots((prev) => {
         const mapped = apiSlots.map((slot) => {
           const existing = prev.find((p) => p.start === slot.start && p.end === slot.end);
+          const hasAppt = appointments.some((a) => a.startAt === slot.start);
+          if (hasAppt) return { ...slot, state: "booked" };
           if (existing) return { ...slot, state: existing.state, reservationToken: existing.reservationToken };
           return slot;
         });
