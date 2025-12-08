@@ -99,7 +99,7 @@ export default function StaffDashboardPage() {
       setSlots((prev) => {
         const mapped = apiSlots.map((slot) => {
           const existing = prev.find((p) => p.start === slot.start && p.end === slot.end);
-          const hasAppt = appointments.some((a) => a.startAt === slot.start);
+          const hasAppt = appointments.some((a) => new Date(a.startAt).getTime() === new Date(slot.start).getTime());
           if (hasAppt) return { ...slot, state: "booked" };
           if (existing) return { ...slot, state: existing.state, reservationToken: existing.reservationToken };
           return slot;
@@ -109,7 +109,7 @@ export default function StaffDashboardPage() {
     } catch (err) {
       console.error(err);
     }
-  }, [apiFetch, unitId, serviceId, selectedDate]);
+  }, [apiFetch, unitId, serviceId, selectedDate, appointments]);
 
   useEffect(() => {
     (async () => {
