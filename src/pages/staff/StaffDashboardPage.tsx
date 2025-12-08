@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { env } from "@/config/env";
 import { useSSE } from "./useSSE";
-import { env } from "@/config/env";
 import { Agenda } from "./components/Agenda";
 import { BlockManager } from "./components/BlockManager";
 import { Notifications } from "./components/Notifications";
 import { Sidebar } from "./components/Sidebar";
 import { SlotAvailability } from "./components/SlotAvailability";
 import { Appointment, Block, Slot } from "./types";
-import { useRef } from "react";
 
 const SESSION_KEY = "barber-flow-session";
 
@@ -20,13 +18,6 @@ export default function StaffDashboardPage() {
   const [isReady, setIsReady] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const lastSyncKeyRef = useRef<string>("");
-  useSSE(`${env.VITE_API_BASE}/events`, (event, data) => {
-    if (!isReady) return;
-    if (event === "appointment_cancelled" || event === "slot_unlocked") {
-      reloadAppointments();
-      reloadSlots();
-    }
-  });
 
   const [unitId, setUnitId] = useState<string>("");
   const [serviceId, setServiceId] = useState<string>("");
@@ -255,6 +246,15 @@ export default function StaffDashboardPage() {
       console.error(err);
     }
   };
+
+  // SSE para atualizar agenda/slots ao receber eventos do backend
+  useSSE(`${env.VITE_API_BASE}/events`, (event, data) => {
+    if (!isReady) return;
+    if (event === "appointment_cancelled" || event === "slot_unlocked") {
+      reloadAppointments();
+      reloadSlots();
+    }
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
