@@ -69,6 +69,9 @@ export async function listAppointments(date?: string, barberId?: string, userId?
 }
 
 export async function cancelAppointment(id: string) {
-  const res = await pool.query(`UPDATE appointments SET status='cancelled' WHERE id=$1`, [id]);
-  return res.rowCount > 0;
+  const res = await pool.query(
+    `UPDATE appointments SET status='cancelled' WHERE id=$1 RETURNING id,user_id as "userId",unit_id as "unitId",service_id as "serviceId",barber_id as "barberId",start_at as "startAt",end_at as "endAt"`,
+    [id],
+  );
+  return res.rows[0] ?? null;
 }

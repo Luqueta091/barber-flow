@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 import { lockReservation, confirmReservation } from "../repositories/reservationsRepo.js";
 import { createAppointment as createAppointmentDb, listAppointments, cancelAppointment } from "../repositories/appointmentsRepo.js";
+import { availabilityCache } from "../../modules/availability/cache/index.js";
+import { sseBus } from "../events/bus.js";
 import { v4 as uuid } from "uuid";
 
 const createSchema = z.object({
@@ -52,8 +54,11 @@ export async function cancelAppointmentHandler(req: Request, res: Response) {
   const id = req.params.id;
   if (!id) return res.status(400).json({ error: "invalid_payload" });
   try {
-    const ok = await cancelAppointment(id);
-    if (!ok) return res.status(404).json({ error: "not_found" });
+    const appt = await cancelAppointment(id);
+    if (!appt) return res.status(404).json({ error: "not_found" });
+    const dateKey = new Date(appt.startAt).toISOString().slice(0, 10);
+    await availabilityCache.invalidate({ unitId: appt.unitId, serviceId: appt.serviceId, date: dateKey });
+    sseBus.publish("appointment_cancelled", { appointmentId: id, unitId: appt.unitId, serviceId: appt.serviceId, startAt: appt.startAt, endAt: appt.endAt });
     return res.status(200).json({ status: "cancelled" });
   } catch (err) {
     console.error(err);
